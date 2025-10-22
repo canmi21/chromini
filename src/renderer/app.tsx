@@ -1,6 +1,7 @@
 /* src/renderer/app.tsx */
 
-import { useState, FormEvent, useEffect } from "react";
+import { useState, FormEvent, useEffect, MouseEvent } from "react";
+import { X } from "lucide-react";
 
 interface HistoryItem {
 	url: string;
@@ -12,6 +13,7 @@ declare global {
 		electronAPI?: {
 			navigateToUrl: (url: string) => void;
 			getHistory: () => Promise<HistoryItem[]>;
+			removeHistoryItem: (url: string) => void;
 		};
 	}
 }
@@ -51,6 +53,18 @@ export default function App() {
 		formatAndNavigate(historyUrl);
 	};
 
+	const handleHistoryRemove = (
+		e: MouseEvent<HTMLButtonElement>,
+		urlToRemove: string
+	) => {
+		e.stopPropagation(); // Prevent navigation when clicking the 'X'
+		window.electronAPI?.removeHistoryItem(urlToRemove);
+		// Update UI instantly for a smooth experience
+		setHistory((currentHistory) =>
+			currentHistory.filter((item) => item.url !== urlToRemove)
+		);
+	};
+
 	return (
 		<div className="h-dvh bg-white dark:bg-black flex flex-col items-center p-8 font-sans">
 			<div className="w-full max-w-xl flex flex-col h-full">
@@ -68,10 +82,10 @@ export default function App() {
 							value={url}
 							onChange={(e) => setUrl(e.target.value)}
 							className="w-full px-1 py-3 text-lg text-center transition-colors
-                                     bg-transparent
-                                     text-black dark:text-white
-                                     border-b border-gray-300 dark:border-gray-700
-                                     focus:outline-none focus:border-black dark:focus:border-white"
+                                    bg-transparent
+                                    text-black dark:text-white
+                                    border-b border-gray-300 dark:border-gray-700
+                                    focus:outline-none focus:border-black dark:focus:border-white"
 							autoFocus
 						/>
 					</form>
@@ -88,14 +102,25 @@ export default function App() {
 								<li key={item.url}>
 									<button
 										onClick={() => handleHistoryClick(item.url)}
-										className="w-full text-left p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors"
+										className="group w-full text-left p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors flex items-center justify-between"
 									>
-										<p className="text-sm text-black dark:text-white truncate">
-											{item.title}
-										</p>
-										<p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-											{item.url}
-										</p>
+										{/* URL and Title */}
+										<div className="truncate w-11/12">
+											<p className="text-sm text-black dark:text-white truncate">
+												{item.title}
+											</p>
+											<p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+												{item.url}
+											</p>
+										</div>
+										{/* Delete Button - visible on group hover */}
+										<button
+											onClick={(e) => handleHistoryRemove(e, item.url)}
+											className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+											aria-label={`Remove ${item.title} from history`}
+										>
+											<X className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+										</button>
 									</button>
 								</li>
 							))}
