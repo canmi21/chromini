@@ -39,7 +39,6 @@ export default function App() {
 			window.electronAPI?.navigateToUrl(formattedUrl);
 		} catch (error) {
 			console.error("Invalid URL:", formattedUrl);
-			// Maybe show an error to the user here
 		}
 	};
 
@@ -53,29 +52,38 @@ export default function App() {
 	};
 
 	return (
-		<div className="min-h-screen bg-white dark:bg-black flex flex-col items-center justify-center p-8 font-sans">
-			<div className="w-full max-w-xl">
-				<form onSubmit={handleSubmit}>
-					<input
-						type="text"
-						value={url}
-						onChange={(e) => setUrl(e.target.value)}
-						placeholder="Enter URL and press Enter"
-						className="w-full px-4 py-3 text-lg rounded-lg transition-all 
-                     bg-gray-100 dark:bg-gray-900 
-                     text-black dark:text-white
-                     border border-gray-200 dark:border-gray-800
-                     focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
-						autoFocus
-					/>
-				</form>
+		<div className="h-dvh bg-white dark:bg-black flex flex-col items-center p-8 font-sans">
+			<div className="w-full max-w-xl flex flex-col h-full">
+				{/* Branding and Input Section */}
+				<div className="flex-shrink-0 text-center">
+					<h1 className="text-5xl font-bold tracking-tighter text-black dark:text-white">
+						Chromini
+					</h1>
+					<p className="mt-4 text-base text-gray-600 dark:text-gray-400">
+						Code. Preview. Immerse.
+					</p>
+					<form onSubmit={handleSubmit} className="mt-12">
+						<input
+							type="text"
+							value={url}
+							onChange={(e) => setUrl(e.target.value)}
+							className="w-full px-1 py-3 text-lg text-center transition-colors
+                                     bg-transparent
+                                     text-black dark:text-white
+                                     border-b border-gray-300 dark:border-gray-700
+                                     focus:outline-none focus:border-black dark:focus:border-white"
+							autoFocus
+						/>
+					</form>
+				</div>
 
+				{/* History Section */}
 				{history.length > 0 && (
-					<div className="mt-8">
-						<h2 className="text-xs text-gray-400 dark:text-gray-600 font-medium uppercase tracking-wider mb-3">
+					<div className="mt-10 flex-grow min-h-0 flex flex-col">
+						<h2 className="text-xs text-left text-gray-500 dark:text-gray-600 font-medium uppercase tracking-wider mb-3 px-3 flex-shrink-0">
 							Recent
 						</h2>
-						<ul className="space-y-2">
+						<ul className="space-y-2 overflow-y-auto h-full pr-2">
 							{history.map((item) => (
 								<li key={item.url}>
 									<button
@@ -94,6 +102,42 @@ export default function App() {
 						</ul>
 					</div>
 				)}
+
+				{/* Footer with hints */}
+				<div className="mt-auto flex-shrink-0 pt-6">
+					<div className="flex items-center justify-center gap-x-4 text-xs text-gray-500 dark:text-gray-600">
+						<p>
+							<b className="font-semibold text-gray-700 dark:text-gray-400">
+								F1
+							</b>{" "}
+							Home
+						</p>
+						<p>
+							<b className="font-semibold text-gray-700 dark:text-gray-400">
+								F2
+							</b>{" "}
+							Prev
+						</p>
+						<p>
+							<b className="font-semibold text-gray-700 dark:text-gray-400">
+								F3
+							</b>{" "}
+							Next
+						</p>
+						<p>
+							<b className="font-semibold text-gray-700 dark:text-gray-400">
+								F5
+							</b>{" "}
+							Reload
+						</p>
+						<p>
+							<b className="font-semibold text-gray-700 dark:text-gray-400">
+								F12
+							</b>{" "}
+							Dev
+						</p>
+					</div>
+				</div>
 			</div>
 		</div>
 	);
