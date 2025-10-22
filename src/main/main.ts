@@ -23,12 +23,14 @@ function createMainWindow() {
 		width,
 		height,
 		webPreferences: {
-			// Now __dirname is correctly defined here
 			preload: path.join(__dirname, "preload.js"),
 			contextIsolation: true,
 			nodeIntegration: false,
 		},
 	});
+
+	// Set the initial window title
+	mainWindow.setTitle("chromini");
 
 	setMainWindow(mainWindow);
 	createWelcomeView();
