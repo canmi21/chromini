@@ -27,9 +27,28 @@ jobs:
           node-version: '24'
           cache: 'pnpm'
 
-      - name: Get version from package.json
-        id: pkg
+      - name: Get version from package.json (Unix)
+        id: pkg_unix
+        if: runner.os != 'Windows'
         run: echo "version=v$(node -p 'require(\"./package.json\").version')" >> $GITHUB_OUTPUT
+
+      - name: Get version from package.json (Windows)
+        id: pkg_win
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $version = (node -p "require('./package.json').version")
+          echo "version=v$version" >> $env:GITHUB_OUTPUT
+
+      - name: Set version
+        id: pkg
+        run: |
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            echo "version=${{ steps.pkg_win.outputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${{ steps.pkg_unix.outputs.version }}" >> $GITHUB_OUTPUT
+          fi
+        shell: bash
 
       - name: Check if tag exists
         id: check_tag
@@ -39,12 +58,14 @@ jobs:
           else
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
+        shell: bash
 
       - name: Stop if tag exists
         if: steps.check_tag.outputs.exists == 'true'
         run: |
           echo "> Tag ${{ steps.pkg.outputs.version }} already exists, skipping build."
           exit 0
+        shell: bash
 
       - name: Install dependencies
         run: pnpm install
@@ -60,11 +81,13 @@ jobs:
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
 
       - name: Rename artifacts
         run: |
           mkdir release
           find dist -type f -exec bash -c 'f="{}"; base=$(basename "$f"); mv "$f" "release/${base,,}"' \;
+        shell: bash
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
