@@ -1,8 +1,41 @@
 /* src/renderer/index.css */
 
-@tailwind base;
+@tailwindbase;
 @tailwind components;
 @tailwind utilities;
+
+/* color variables */
+:root {
+	--color-bg: #ffffff;
+	--color-text: #000000;
+	--color-text-secondary: #666666;
+	--color-border: #d4d4d4;
+	--color-input-bg: #ffffff;
+	--color-button-bg: #000000;
+	--color-button-text: #ffffff;
+	--color-button-hover: #404040;
+	--color-error: #dc2626;
+	--color-kbd-bg: #f5f5f5;
+	--color-kbd-border: #d4d4d4;
+	--color-focus-ring: #000000;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--color-bg: #000000;
+		--color-text: #ffffff;
+		--color-text-secondary: #737373;
+		--color-border: #404040;
+		--color-input-bg: #000000;
+		--color-button-bg: #ffffff;
+		--color-button-text: #000000;
+		--color-button-hover: #e5e5e5;
+		--color-error: #f87171;
+		--color-kbd-bg: #171717;
+		--color-kbd-border: #262626;
+		--color-focus-ring: #ffffff;
+	}
+}
 
 * {
 	margin: 0;
@@ -17,6 +50,8 @@ body {
 		"Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
+	background-color: var(--color-bg);
+	color: var(--color-text);
 }
 
 #root {
@@ -24,9 +59,10 @@ body {
 	height: 100vh;
 }
 
-/* custom scrollbar for dark mode */
+/* custom scrollbar */
 ::-webkit-scrollbar {
-	width: 8px;
+	width: 10px;
+	height: 10px;
 }
 
 ::-webkit-scrollbar-track {
@@ -34,20 +70,20 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-	background: #888;
-	border-radius: 4px;
+	background: #d4d4d4;
+	border-radius: 5px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-	background: #555;
+	background: #a3a3a3;
 }
 
 @media (prefers-color-scheme: dark) {
 	::-webkit-scrollbar-thumb {
-		background: #444;
+		background: #404040;
 	}
 
 	::-webkit-scrollbar-thumb:hover {
-		background: #666;
+		background: #525252;
 	}
 }
