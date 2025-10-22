@@ -7,7 +7,7 @@ import fs from "fs";
 // Define the structure of our configuration
 interface Config {
 	windowBounds: { width: number; height: number };
-	history: { url: string; title: string; favicon: string }[];
+	history: { url: string; title: string }[]; // Removed favicon
 }
 
 const HOME = app.getPath("home");
@@ -20,7 +20,7 @@ const DEFAULT_CONFIG: Config = {
 	history: [],
 };
 
-// --- New Helper Function ---
+// --- Helper Function ---
 // Normalizes a URL for more reliable comparison.
 // Removes hash, and trailing slash.
 function normalizeUrl(urlString: string): string {
@@ -77,11 +77,8 @@ export function saveConfig(config: Config) {
 }
 
 // Add a new entry to the history, keeping only the last 50
-export function addHistoryItem(item: {
-	url: string;
-	title: string;
-	favicon: string;
-}) {
+export function addHistoryItem(item: { url: string; title: string }) {
+	// Removed favicon
 	const config = getConfig();
 	const normalizedUrl = normalizeUrl(item.url);
 
