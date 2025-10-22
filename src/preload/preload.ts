@@ -1,6 +1,6 @@
 /* src/preload/preload.ts */
 
-import { contextBridge, ipcRenderer } from "electron";
+const { contextBridge, ipcRenderer } = require("electron");
 
 // expose api to renderer process
 contextBridge.exposeInMainWorld("electronAPI", {

@@ -1,13 +1,13 @@
 /* src/main/main.ts */
 
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain, globalShortcut } from "electron";
 import path from "path";
 import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const isDev = process.env.NODE_ENV === "development";
+const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
 
 let mainWindow: BrowserWindow | null = null;
 let browserWindow: BrowserWindow | null = null;
@@ -19,17 +19,17 @@ function createMainWindow() {
 		height: 400,
 		resizable: false,
 		webPreferences: {
-			preload: path.join(__dirname, "../preload/preload.js"),
+			preload: path.join(__dirname, "preload.js"),
 			contextIsolation: true,
 			nodeIntegration: false,
+			webSecurity: true,
 		},
 	});
 
 	// load react app
 	if (isDev) {
 		mainWindow.loadURL("http://localhost:5173");
-		// open devtools in dev mode
-		// mainWindow.webContents.openDevTools()
+		mainWindow.webContents.openDevTools();
 	} else {
 		mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
 	}
@@ -53,20 +53,47 @@ function createBrowserWindow(url: string) {
 			nodeIntegration: false,
 			contextIsolation: true,
 			devTools: true,
+			webSecurity: true,
 		},
 	});
 
 	// load user's url
-	browserWindow.loadURL(url);
-
-	// enable F12 dev tools
-	browserWindow.webContents.on("before-input-event", (_event, input) => {
-		if (input.key === "F12") {
-			browserWindow?.webContents.toggleDevTools();
-		}
+	browserWindow.loadURL(url).catch((err) => {
+		console.error("Failed to load URL:", err);
 	});
 
+	// register global shortcuts for dev tools
+	const registerDevToolsShortcuts = () => {
+		// F12 for all platforms
+		globalShortcut.register("F12", () => {
+			if (browserWindow && !browserWindow.isDestroyed()) {
+				browserWindow.webContents.toggleDevTools();
+			}
+		});
+
+		// Cmd+Option+I for macOS
+		if (process.platform === "darwin") {
+			globalShortcut.register("Command+Option+I", () => {
+				if (browserWindow && !browserWindow.isDestroyed()) {
+					browserWindow.webContents.toggleDevTools();
+				}
+			});
+		}
+		// Ctrl+Shift+I for Windows/Linux
+		else {
+			globalShortcut.register("Control+Shift+I", () => {
+				if (browserWindow && !browserWindow.isDestroyed()) {
+					browserWindow.webContents.toggleDevTools();
+				}
+			});
+		}
+	};
+
+	registerDevToolsShortcuts();
+
 	browserWindow.on("closed", () => {
+		// unregister shortcuts when window closes
+		globalShortcut.unregisterAll();
 		browserWindow = null;
 		app.quit();
 	});
@@ -88,7 +115,12 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
+	globalShortcut.unregisterAll();
 	if (process.platform !== "darwin") {
 		app.quit();
 	}
+});
+
+app.on("will-quit", () => {
+	globalShortcut.unregisterAll();
 });

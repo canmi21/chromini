@@ -49,28 +49,21 @@ export default function App() {
 	};
 
 	return (
-		<div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+		<div className="min-h-screen bg-white dark:bg-black flex items-center justify-center p-8">
 			<div className="w-full max-w-md">
 				{/* header */}
-				<div className="text-center mb-8">
-					<h1 className="text-4xl font-bold text-gray-800 dark:text-white mb-2">
-						Simple Browser
+				<div className="mb-12 text-center">
+					<h1 className="text-5xl font-bold tracking-tight text-black dark:text-white mb-3">
+						Browser
 					</h1>
-					<p className="text-gray-600 dark:text-gray-300">
-						Enter a URL to start browsing
+					<p className="text-gray-600 dark:text-gray-400 text-sm">
+						Enter a URL to begin
 					</p>
 				</div>
 
 				{/* url input form */}
 				<form onSubmit={handleSubmit} className="space-y-4">
-					<div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6">
-						<label
-							htmlFor="url-input"
-							className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2"
-						>
-							Website URL
-						</label>
-
+					<div>
 						<input
 							id="url-input"
 							type="text"
@@ -79,12 +72,15 @@ export default function App() {
 								setUrl(e.target.value);
 								setError("");
 							}}
-							placeholder="example.com or https://example.com"
-							className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg 
-                       bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                       focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent
-                       placeholder-gray-400 dark:placeholder-gray-500
-                       transition-colors"
+							placeholder="example.com"
+							className="w-full px-4 py-3 text-base
+                       bg-white dark:bg-black
+                       text-black dark:text-white
+                       border border-gray-300 dark:border-gray-700
+                       rounded-lg
+                       focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white
+                       placeholder-gray-400 dark:placeholder-gray-600
+                       transition-all"
 							autoFocus
 						/>
 
@@ -93,28 +89,37 @@ export default function App() {
 								{error}
 							</p>
 						)}
-
-						<button
-							type="submit"
-							className="w-full mt-4 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600
-                       text-white font-medium py-3 px-4 rounded-lg
-                       transition-colors duration-200
-                       focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-                       dark:focus:ring-offset-gray-800"
-						>
-							Go
-						</button>
 					</div>
+
+					<button
+						type="submit"
+						className="w-full bg-black dark:bg-white
+                     text-white dark:text-black
+                     font-medium py-3 px-4 rounded-lg
+                     hover:bg-gray-800 dark:hover:bg-gray-200
+                     transition-colors duration-150
+                     focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white focus:ring-offset-2 dark:focus:ring-offset-black"
+					>
+						Continue →
+					</button>
 				</form>
 
-				{/* tips */}
-				<div className="mt-6 text-center">
-					<p className="text-sm text-gray-500 dark:text-gray-400">
-						Press{" "}
-						<kbd className="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded">
-							F12
+				{/* footer tips */}
+				<div className="mt-12 text-center">
+					<p className="text-xs text-gray-500 dark:text-gray-600">
+						macOS:{" "}
+						<kbd className="px-1.5 py-0.5 text-xs bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-800 rounded">
+							⌘
 						</kbd>{" "}
-						to open developer tools
+						+{" "}
+						<kbd className="px-1.5 py-0.5 text-xs bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-800 rounded">
+							⌥
+						</kbd>{" "}
+						+{" "}
+						<kbd className="px-1.5 py-0.5 text-xs bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-800 rounded">
+							I
+						</kbd>{" "}
+						for DevTools
 					</p>
 				</div>
 			</div>

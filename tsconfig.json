@@ -16,6 +16,12 @@
 		"noUnusedParameters": true,
 		"noFallthroughCasesInSwitch": true
 	},
-	"include": ["src/renderer/**/*", "src/preload/**/*"],
-	"exclude": ["node_modules", "dist", "dist-electron"]
+	"include": ["src/renderer/**/*"],
+	"exclude": [
+		"node_modules",
+		"dist",
+		"dist-electron",
+		"src/main",
+		"src/preload"
+	]
 }
