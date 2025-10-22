@@ -14,7 +14,7 @@ declare global {
 			navigateToUrl: (url: string) => void;
 			getHistory: () => Promise<HistoryItem[]>;
 			removeHistoryItem: (url: string) => void;
-			onRefreshHistory: (callback: () => void) => void; // Add listener
+			onRefreshHistory: (callback: () => void) => void;
 		};
 	}
 }
@@ -43,6 +43,7 @@ export default function App() {
 		try {
 			new URL(formattedUrl);
 			window.electronAPI?.navigateToUrl(formattedUrl);
+			setUrl(""); // Clear the input field on successful navigation
 		} catch (error) {
 			console.error("Invalid URL:", formattedUrl);
 		}
@@ -128,7 +129,7 @@ export default function App() {
 				)}
 
 				<div className="mt-auto flex-shrink-0 pt-6">
-					<div className="flex items-center justify-center gap-x-4 text-xs text-gray-500 dark:text-gray-600">
+					<div className="flex flex-wrap items-center justify-center gap-x-4 text-xs text-gray-500 dark:text-gray-600">
 						<p>
 							<b className="font-semibold text-gray-700 dark:text-gray-400">
 								F1
@@ -146,6 +147,12 @@ export default function App() {
 								F3
 							</b>{" "}
 							Next
+						</p>
+						<p>
+							<b className="font-semibold text-gray-700 dark:text-gray-400">
+								F4
+							</b>{" "}
+							Close
 						</p>
 						<p>
 							<b className="font-semibold text-gray-700 dark:text-gray-400">
