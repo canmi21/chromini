@@ -1,5 +1,3 @@
-# .github/workflows/build.yml
-
 name: Build & Release
 
 on:
@@ -31,6 +29,7 @@ jobs:
         id: pkg_unix
         if: runner.os != 'Windows'
         run: echo "version=v$(node -p 'require(\"./package.json\").version')" >> $GITHUB_OUTPUT
+        shell: bash
 
       - name: Get version from package.json (Windows)
         id: pkg_win
@@ -52,13 +51,13 @@ jobs:
 
       - name: Check if tag exists
         id: check_tag
-        shell: bash
         run: |
           if git ls-remote --tags origin | grep -q "refs/tags/${{ steps.pkg.outputs.version }}"; then
             echo "exists=true" >> $GITHUB_OUTPUT
           else
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
+        shell: bash
 
       - name: Stop if tag exists
         if: steps.check_tag.outputs.exists == 'true'
@@ -83,15 +82,27 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Collect and rename artifacts
+      - name: Collect and rename artifacts (macOS/Linux compatible)
+        if: runner.os != 'Windows'
         shell: bash
         run: |
           mkdir -p release
-          find dist -type f -exec bash -c '
+          find dist -type f -name "Chromini-*" -exec bash -c '
             f="{}"
             base=$(basename "$f")
-            mv "$f" "release/${base,,}"
+            lower_base=$(echo "$base" | tr "[:upper:]" "[:lower:]")
+            mv "$f" "release/$lower_base"
           ' \;
+
+      - name: Collect and rename artifacts (Windows compatible)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -Path "release" -ItemType Directory -Force
+          Get-ChildItem -Path "dist" -Filter "Chromini-*" | ForEach-Object {
+            $newName = $_.Name.ToLower()
+            Move-Item -Path $_.FullName -Destination "release/$newName"
+          }
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -110,11 +121,12 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: '20'
 
       - name: Get version from package.json
         id: pkg
         run: echo "version=v$(node -p 'require(\"./package.json\").version')" >> $GITHUB_OUTPUT
+        shell: bash
 
       - name: Create tag
         run: |
