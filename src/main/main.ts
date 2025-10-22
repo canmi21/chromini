@@ -10,7 +10,8 @@ const __dirname = path.dirname(__filename);
 const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
 
 let mainWindow: BrowserWindow | null = null;
-let browserWindow: BrowserWindow | null = null;
+const tabs: BrowserWindow[] = [];
+let currentTabIndex = 0;
 
 // create url input window
 function createMainWindow() {
@@ -36,19 +37,19 @@ function createMainWindow() {
 
 	mainWindow.on("closed", () => {
 		mainWindow = null;
+		// if no tabs, quit app
+		if (tabs.length === 0) {
+			app.quit();
+		}
 	});
 }
 
-// create browser window with webview
-function createBrowserWindow(url: string) {
-	// close input window
-	if (mainWindow) {
-		mainWindow.close();
-	}
-
-	browserWindow = new BrowserWindow({
+// create new tab
+function createTab(url: string) {
+	const tab = new BrowserWindow({
 		width: 1200,
 		height: 800,
+		show: false,
 		webPreferences: {
 			nodeIntegration: false,
 			contextIsolation: true,
@@ -57,57 +58,153 @@ function createBrowserWindow(url: string) {
 		},
 	});
 
-	// load user's url
-	browserWindow.loadURL(url).catch((err) => {
+	// load url
+	tab.loadURL(url).catch((err) => {
 		console.error("Failed to load URL:", err);
 	});
 
-	// register global shortcuts for dev tools
-	const registerDevToolsShortcuts = () => {
-		// unregister all first to avoid conflicts
-		globalShortcut.unregisterAll();
-
-		// F12 for all platforms
-		globalShortcut.register("F12", () => {
-			if (browserWindow && !browserWindow.isDestroyed()) {
-				browserWindow.webContents.toggleDevTools();
-			}
-		});
-
-		// Cmd+Option+I for macOS
-		if (process.platform === "darwin") {
-			globalShortcut.register("CommandOrControl+Option+I", () => {
-				if (browserWindow && !browserWindow.isDestroyed()) {
-					browserWindow.webContents.toggleDevTools();
-				}
-			});
-		}
-		// Ctrl+Shift+I for Windows/Linux
-		else {
-			globalShortcut.register("Control+Shift+I", () => {
-				if (browserWindow && !browserWindow.isDestroyed()) {
-					browserWindow.webContents.toggleDevTools();
-				}
-			});
-		}
-	};
-
-	registerDevToolsShortcuts();
-
-	browserWindow.on("closed", () => {
-		// unregister shortcuts when window closes
-		globalShortcut.unregisterAll();
-		browserWindow = null;
-		app.quit();
+	// show when ready
+	tab.once("ready-to-show", () => {
+		tab.show();
+		tab.focus();
 	});
+
+	// handle tab close
+	tab.on("closed", () => {
+		const index = tabs.indexOf(tab);
+		if (index > -1) {
+			tabs.splice(index, 1);
+		}
+
+		// update current tab index
+		if (currentTabIndex >= tabs.length) {
+			currentTabIndex = Math.max(0, tabs.length - 1);
+		}
+
+		// if no tabs left, show main window or quit
+		if (tabs.length === 0) {
+			if (mainWindow && !mainWindow.isDestroyed()) {
+				mainWindow.show();
+				mainWindow.focus();
+			} else {
+				app.quit();
+			}
+		} else {
+			// focus on current tab
+			focusCurrentTab();
+		}
+	});
+
+	tabs.push(tab);
+	currentTabIndex = tabs.length - 1;
+
+	// hide main window when first tab is created
+	if (mainWindow && !mainWindow.isDestroyed()) {
+		mainWindow.hide();
+	}
+
+	return tab;
+}
+
+// focus current tab
+function focusCurrentTab() {
+	if (tabs.length > 0 && tabs[currentTabIndex] && !tabs[currentTabIndex].isDestroyed()) {
+		tabs[currentTabIndex].show();
+		tabs[currentTabIndex].focus();
+	}
+}
+
+// navigate to previous tab
+function previousTab() {
+	if (tabs.length <= 1) return;
+
+	currentTabIndex = (currentTabIndex - 1 + tabs.length) % tabs.length;
+	focusCurrentTab();
+}
+
+// navigate to next tab
+function nextTab() {
+	if (tabs.length <= 1) return;
+
+	currentTabIndex = (currentTabIndex + 1) % tabs.length;
+	focusCurrentTab();
+}
+
+// show main window (url input)
+function showMainWindow() {
+	if (!mainWindow || mainWindow.isDestroyed()) {
+		createMainWindow();
+	} else {
+		mainWindow.show();
+		mainWindow.focus();
+	}
+}
+
+// reload current tab
+function reloadCurrentTab() {
+	if (tabs.length > 0 && tabs[currentTabIndex] && !tabs[currentTabIndex].isDestroyed()) {
+		tabs[currentTabIndex].webContents.reloadIgnoringCache();
+	}
+}
+
+// toggle devtools for current tab
+function toggleDevTools() {
+	if (tabs.length > 0 && tabs[currentTabIndex] && !tabs[currentTabIndex].isDestroyed()) {
+		tabs[currentTabIndex].webContents.toggleDevTools();
+	}
+}
+
+// register global shortcuts
+function registerGlobalShortcuts() {
+	// unregister all first
+	globalShortcut.unregisterAll();
+
+	// F1 - back to url input
+	globalShortcut.register("F1", () => {
+		showMainWindow();
+	});
+
+	// F2 - previous tab
+	globalShortcut.register("F2", () => {
+		previousTab();
+	});
+
+	// F3 - next tab
+	globalShortcut.register("F3", () => {
+		nextTab();
+	});
+
+	// F5 - reload current tab
+	globalShortcut.register("F5", () => {
+		reloadCurrentTab();
+	});
+
+	// F12 - toggle devtools
+	globalShortcut.register("F12", () => {
+		toggleDevTools();
+	});
+
+	// Cmd+Option+I for macOS (devtools)
+	if (process.platform === "darwin") {
+		globalShortcut.register("CommandOrControl+Option+I", () => {
+			toggleDevTools();
+		});
+	}
+	// Ctrl+Shift+I for Windows/Linux (devtools)
+	else {
+		globalShortcut.register("Control+Shift+I", () => {
+			toggleDevTools();
+		});
+	}
 }
 
 // handle url navigation from renderer
 ipcMain.on("navigate-to-url", (_event, url: string) => {
-	createBrowserWindow(url);
+	createTab(url);
 });
 
 app.whenReady().then(() => {
+	registerGlobalShortcuts();
 	createMainWindow();
 
 	app.on("activate", () => {
