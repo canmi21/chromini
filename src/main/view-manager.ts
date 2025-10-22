@@ -113,7 +113,7 @@ export function createView(url: string) {
 	view.webContents.once("did-finish-load", () => {
 		const pageUrl = view.webContents.getURL();
 		const pageTitle = view.webContents.getTitle();
-		addHistoryItem({ url: pageUrl, title: pageTitle, favicon: "" });
+		addHistoryItem({ url: pageUrl, title: pageTitle }); // Removed favicon
 	});
 
 	createContextMenu(view.webContents);
@@ -126,6 +126,8 @@ export function getActiveView() {
 
 export function showWelcomeView() {
 	activeViewIndex = -1;
+	// Tell the welcome view to refresh its history list
+	welcomeView?.webContents.send("refresh-history");
 	showActiveView();
 }
 
@@ -144,6 +146,13 @@ export function previousView() {
 export function reloadActiveView() {
 	if (activeViewIndex > -1 && views[activeViewIndex]) {
 		views[activeViewIndex].webContents.reloadIgnoringCache();
+	}
+}
+
+// Toggles the main window's fullscreen state
+export function toggleFullScreen() {
+	if (mainWindow) {
+		mainWindow.setFullScreen(!mainWindow.isFullScreen());
 	}
 }
 
