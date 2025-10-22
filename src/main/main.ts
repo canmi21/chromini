@@ -1,10 +1,10 @@
 /* src/main/main.ts */
 
-import { app, session } from "electron"; // Import the 'session' module
+import { app, session } from "electron";
 import { setupIpcHandlers } from "./ipc-handler";
 import { registerShortcuts, unregisterShortcuts } from "./shortcuts";
 import { createMainWindow, getWindowCount } from "./window-manager";
-import { createAppMenu } from "./app-menu";
+import { createAppMenu } from "./app-menu"; // Import the new menu creator
 
 app.whenReady().then(() => {
 	// Get the default user agent string.
@@ -15,7 +15,7 @@ app.whenReady().then(() => {
 
 	setupIpcHandlers();
 	registerShortcuts();
-	createAppMenu();
+	createAppMenu(); // Set the application menu
 	createMainWindow();
 
 	app.on("activate", () => {
