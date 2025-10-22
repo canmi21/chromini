@@ -1,0 +1,64 @@
+{
+	"images": [
+		{
+			"idiom": "universal",
+			"size": "16x16",
+			"scale": "1x",
+			"filename": "mac16.png"
+		},
+		{
+			"idiom": "universal",
+			"size": "16x16",
+			"scale": "2x",
+			"filename": "mac32.png"
+		},
+		{
+			"idiom": "universal",
+			"size": "32x32",
+			"scale": "1x",
+			"filename": "mac32.png"
+		},
+		{
+			"idiom": "universal",
+			"size": "32x32",
+			"scale": "2x",
+			"filename": "mac64.png"
+		},
+		{
+			"idiom": "universal",
+			"size": "128x128",
+			"scale": "1x",
+			"filename": "mac128.png"
+		},
+		{
+			"idiom": "universal",
+			"size": "128x128",
+			"scale": "2x",
+			"filename": "mac256.png"
+		},
+		{
+			"idiom": "universal",
+			"size": "256x256",
+			"scale": "1x",
+			"filename": "mac256.png"
+		},
+		{
+			"idiom": "universal",
+			"size": "256x256",
+			"scale": "2x",
+			"filename": "mac512.png"
+		},
+		{
+			"idiom": "universal",
+			"size": "512x512",
+			"scale": "1x",
+			"filename": "mac512.png"
+		},
+		{
+			"idiom": "universal",
+			"size": "512x512",
+			"scale": "2x",
+			"filename": "mac1024.png"
+		}
+	]
+}
