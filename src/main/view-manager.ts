@@ -19,7 +19,7 @@ const isDev = process.env.NODE_ENV === "development";
 // Define URL for the welcome screen (renderer)
 const WELCOME_URL = isDev
 	? "http://localhost:5173"
-	: `file://${path.join(__dirname, "../dist/index.html")}`; // Correctly use path.join
+	: `file://${path.join(__dirname, "../dist/index.html")}`;
 
 export function setMainWindow(win: BrowserWindow) {
 	mainWindow = win;
@@ -27,8 +27,15 @@ export function setMainWindow(win: BrowserWindow) {
 	mainWindow.on("resize", () => {
 		const bounds = mainWindow?.getBounds();
 		if (bounds) {
-			welcomeView?.setBounds({ x: 0, y: 0, width: bounds.width, height: bounds.height });
-			views.forEach((v) => v.setBounds({ x: 0, y: 0, width: bounds.width, height: bounds.height }));
+			welcomeView?.setBounds({
+				x: 0,
+				y: 0,
+				width: bounds.width,
+				height: bounds.height,
+			});
+			views.forEach((v) =>
+				v.setBounds({ x: 0, y: 0, width: bounds.width, height: bounds.height })
+			);
 		}
 	});
 }
@@ -40,18 +47,23 @@ function adjustViewBounds(view: BrowserView) {
 	view.setBounds({ x: 0, y: 0, width, height });
 }
 
-// Show the currently active view (or welcome view)
+// Show the currently active view and update window title
 function showActiveView() {
 	if (!mainWindow) return;
 
 	// Remove all views first to avoid visual glitches
-	mainWindow.getBrowserViews().forEach((view) => mainWindow?.removeBrowserView(view));
+	mainWindow
+		.getBrowserViews()
+		.forEach((view) => mainWindow?.removeBrowserView(view));
 
 	let viewToShow: BrowserView | null = null;
 	if (activeViewIndex === -1 && welcomeView) {
 		viewToShow = welcomeView;
+		mainWindow.setTitle("chromini");
 	} else if (views[activeViewIndex]) {
 		viewToShow = views[activeViewIndex];
+		const pageTitle = viewToShow.webContents.getTitle();
+		mainWindow.setTitle(pageTitle || "chromini");
 	}
 
 	if (viewToShow) {
@@ -63,10 +75,10 @@ function showActiveView() {
 export function createWelcomeView() {
 	if (!mainWindow) return;
 	welcomeView = new BrowserView({
-        webPreferences: {
-            preload: path.join(__dirname, "preload.js"), // Also needs preload
-        }
-    });
+		webPreferences: {
+			preload: path.join(__dirname, "preload.js"),
+		},
+	});
 	mainWindow.addBrowserView(welcomeView);
 	adjustViewBounds(welcomeView);
 	welcomeView.webContents.loadURL(WELCOME_URL);
@@ -90,6 +102,13 @@ export function createView(url: string) {
 	adjustViewBounds(view);
 	view.webContents.loadURL(url);
 
+	// Update window title when the page title changes
+	view.webContents.on("page-title-updated", (_event, title) => {
+		if (mainWindow && getActiveView() === view) {
+			mainWindow.setTitle(title);
+		}
+	});
+
 	// Add to history once page is loaded
 	view.webContents.once("did-finish-load", () => {
 		const pageUrl = view.webContents.getURL();
@@ -99,6 +118,10 @@ export function createView(url: string) {
 
 	createContextMenu(view.webContents);
 	showActiveView();
+}
+
+export function getActiveView() {
+	return activeViewIndex > -1 ? views[activeViewIndex] : null;
 }
 
 export function showWelcomeView() {
@@ -131,10 +154,6 @@ export function toggleActiveViewDevTools() {
 		// Allow devtools on welcome screen in dev mode
 		welcomeView.webContents.toggleDevTools();
 	}
-}
-
-export function getActiveView() {
-	return activeViewIndex > -1 ? views[activeViewIndex] : null;
 }
 
 export function destroyViews() {
