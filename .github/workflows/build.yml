@@ -50,7 +50,14 @@ jobs:
         run: pnpm install
 
       - name: Build application
-        run: pnpm electron:build --${{ matrix.os }} --publish never
+        run: |
+          if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+            pnpm electron:build --mac --publish never
+          elif [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+            pnpm electron:build --linux --publish never
+          else
+            pnpm electron:build --win --publish never
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
