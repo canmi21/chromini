@@ -2,13 +2,13 @@
 
 import { Menu, WebContents, BrowserWindow } from "electron";
 import { createMainWindow } from "./window-manager";
-import { createView } from "./view-manager";
+import { createView, closeActiveView } from "./view-manager";
 
 export function createContextMenu(webContents: WebContents) {
 	webContents.on("context-menu", (_event, params) => {
 		const parentWindow = BrowserWindow.fromWebContents(webContents);
 		const menu = Menu.buildFromTemplate([
-			// Manual implementation for "Back"
+			// Navigation controls
 			{
 				label: "Back",
 				enabled: webContents.canGoBack(),
@@ -18,7 +18,6 @@ export function createContextMenu(webContents: WebContents) {
 					}
 				},
 			},
-			// Manual implementation for "Forward"
 			{
 				label: "Forward",
 				enabled: webContents.canGoForward(),
@@ -30,9 +29,11 @@ export function createContextMenu(webContents: WebContents) {
 			},
 			{
 				label: "Reload",
+				accelerator: "CmdOrCtrl+R",
 				click: () => webContents.reload(),
 			},
 			{ type: "separator" },
+			// Link-specific actions
 			{
 				label: "Open Link in New Tab",
 				visible: !!params.linkURL,
@@ -52,40 +53,61 @@ export function createContextMenu(webContents: WebContents) {
 				},
 			},
 			{ type: "separator" },
+			// Standard edit controls
 			{ role: "cut" },
 			{ role: "copy" },
 			{ role: "paste" },
 			{ type: "separator" },
-			// Manual implementation for "Toggle Developer Tools"
+			// Page, window, and developer actions
 			{
-				label: "Inspect",
-				click: () => webContents.toggleDevTools(),
+				label: "Move to New Window",
+				visible: !params.linkURL, // Only show when not clicking a link
+				click: () => {
+					const currentURL = webContents.getURL();
+					if (currentURL) {
+						createMainWindow(currentURL);
+						closeActiveView(); // Close the original tab
+					}
+				},
 			},
-			// Manual implementation for "Toggle Full Screen"
 			{
 				label: "Toggle Full Screen",
+				accelerator: "F11",
 				click: () => {
 					if (parentWindow) {
 						parentWindow.setFullScreen(!parentWindow.isFullScreen());
 					}
 				},
 			},
+			{ type: "separator" },
+			{
+				label: "Developer Tools",
+				accelerator: "CmdOrCtrl+Shift+I",
+				click: () => webContents.toggleDevTools(),
+			},
 		]);
 		menu.popup();
 	});
 }
 
-// New context menu for the welcome page
+// Context menu for the welcome page
 export function createWelcomeContextMenu(webContents: WebContents) {
 	webContents.on("context-menu", (_event) => {
 		const menu = Menu.buildFromTemplate([
 			{
 				label: "Reload",
+				accelerator: "CmdOrCtrl+R",
 				click: () => webContents.reload(),
+			},
+			{
+				label: "New Window",
+				accelerator: "CmdOrCtrl+N",
+				click: () => createMainWindow(),
 			},
 			{ type: "separator" },
 			{
-				label: "Inspect",
+				label: "Developer Tools",
+				accelerator: "CmdOrCtrl+Shift+I",
 				click: () => webContents.toggleDevTools(),
 			},
 		]);
