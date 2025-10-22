@@ -14,16 +14,23 @@ body {
 	@apply bg-white dark:bg-black text-black dark:text-white;
 }
 
-/* A slightly more subtle scrollbar for dark mode */
+/* Auto-hiding scrollbar for Webkit browsers (Chrome, Safari, Electron) */
 ::-webkit-scrollbar {
 	width: 8px;
 }
 ::-webkit-scrollbar-track {
 	background: transparent;
 }
+/* Make thumb transparent by default */
 ::-webkit-scrollbar-thumb {
-	@apply bg-gray-300 dark:bg-gray-700 rounded-full;
+	background: transparent;
+	@apply rounded-full;
 }
-::-webkit-scrollbar-thumb:hover {
+/* Show thumb on hover of the scroll container (requires 'group' class on container) */
+.group:hover ::-webkit-scrollbar-thumb {
+	@apply bg-gray-300 dark:bg-gray-700;
+}
+/* Style thumb on its own hover state (when visible) */
+.group:hover ::-webkit-scrollbar-thumb:hover {
 	@apply bg-gray-400 dark:bg-gray-600;
 }
