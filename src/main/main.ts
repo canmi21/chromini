@@ -1,53 +1,9 @@
 /* src/main/main.ts */
 
 import { app, BrowserWindow } from "electron";
-import path from "path";
-import { fileURLToPath } from "url";
-import { getConfig, saveConfig, CACHE_PATH } from "./config-manager";
-import { setMainWindow, createWelcomeView, destroyViews } from "./view-manager";
 import { setupIpcHandlers } from "./ipc-handler";
 import { registerShortcuts, unregisterShortcuts } from "./shortcuts";
-
-// Recreate __dirname for ES Module compatibility
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Set persistent cache path before app is ready
-app.setPath("userData", CACHE_PATH);
-
-function createMainWindow() {
-	const config = getConfig();
-	const { width, height } = config.windowBounds;
-
-	const mainWindow = new BrowserWindow({
-		width,
-		height,
-		webPreferences: {
-			preload: path.join(__dirname, "preload.js"),
-			contextIsolation: true,
-			nodeIntegration: false,
-		},
-	});
-
-	// Set the initial window title
-	mainWindow.setTitle("chromini");
-
-	setMainWindow(mainWindow);
-	createWelcomeView();
-
-	// Save window size on close for persistence
-	mainWindow.on("close", () => {
-		const [width, height] = mainWindow.getSize();
-		const currentConfig = getConfig();
-		currentConfig.windowBounds = { width, height };
-		saveConfig(currentConfig);
-	});
-
-	// Clean up views when window is closed
-	mainWindow.on("closed", () => {
-		destroyViews();
-	});
-}
+import { createMainWindow, getWindowCount } from "./window-manager";
 
 app.whenReady().then(() => {
 	setupIpcHandlers();
@@ -55,13 +11,15 @@ app.whenReady().then(() => {
 	createMainWindow();
 
 	app.on("activate", () => {
-		if (BrowserWindow.getAllWindows().length === 0) {
+		// On macOS, re-create a window when the dock icon is clicked
+		if (getWindowCount() === 0) {
 			createMainWindow();
 		}
 	});
 });
 
 app.on("window-all-closed", () => {
+	// Quit when all windows are closed, except on macOS
 	if (process.platform !== "darwin") {
 		app.quit();
 	}
