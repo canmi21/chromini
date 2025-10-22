@@ -113,7 +113,7 @@ export function createView(url: string) {
 	view.webContents.once("did-finish-load", () => {
 		const pageUrl = view.webContents.getURL();
 		const pageTitle = view.webContents.getTitle();
-		addHistoryItem({ url: pageUrl, title: pageTitle }); // Removed favicon
+		addHistoryItem({ url: pageUrl, title: pageTitle });
 	});
 
 	createContextMenu(view.webContents);
@@ -147,6 +147,26 @@ export function reloadActiveView() {
 	if (activeViewIndex > -1 && views[activeViewIndex]) {
 		views[activeViewIndex].webContents.reloadIgnoringCache();
 	}
+}
+
+// Closes the currently active view ("tab")
+export function closeActiveView() {
+	if (activeViewIndex < 0 || !views[activeViewIndex]) return;
+
+	const viewToClose = views[activeViewIndex];
+	(viewToClose.webContents as any).destroy();
+	views.splice(activeViewIndex, 1);
+
+	// If we closed the last tab, go to welcome screen
+	if (views.length === 0) {
+		activeViewIndex = -1;
+	} else {
+		// Otherwise, ensure the index is still valid (points to the new last tab if needed)
+		if (activeViewIndex >= views.length) {
+			activeViewIndex = views.length - 1;
+		}
+	}
+	showActiveView();
 }
 
 // Toggles the main window's fullscreen state
