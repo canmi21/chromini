@@ -5,7 +5,7 @@ import {
 	showWelcomeView,
 	previousView,
 	nextView,
-	closeActiveView, // Import the new function
+	closeActiveView,
 	reloadActiveView,
 	toggleActiveViewDevTools,
 	toggleFullScreen,
