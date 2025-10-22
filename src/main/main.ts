@@ -64,6 +64,9 @@ function createBrowserWindow(url: string) {
 
 	// register global shortcuts for dev tools
 	const registerDevToolsShortcuts = () => {
+		// unregister all first to avoid conflicts
+		globalShortcut.unregisterAll();
+
 		// F12 for all platforms
 		globalShortcut.register("F12", () => {
 			if (browserWindow && !browserWindow.isDestroyed()) {
@@ -73,7 +76,7 @@ function createBrowserWindow(url: string) {
 
 		// Cmd+Option+I for macOS
 		if (process.platform === "darwin") {
-			globalShortcut.register("Command+Option+I", () => {
+			globalShortcut.register("CommandOrControl+Option+I", () => {
 				if (browserWindow && !browserWindow.isDestroyed()) {
 					browserWindow.webContents.toggleDevTools();
 				}
