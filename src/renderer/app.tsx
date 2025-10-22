@@ -14,6 +14,7 @@ declare global {
 			navigateToUrl: (url: string) => void;
 			getHistory: () => Promise<HistoryItem[]>;
 			removeHistoryItem: (url: string) => void;
+			onRefreshHistory: (callback: () => void) => void; // Add listener
 		};
 	}
 }
@@ -22,21 +23,24 @@ export default function App() {
 	const [url, setUrl] = useState("");
 	const [history, setHistory] = useState<HistoryItem[]>([]);
 
-	// Fetch history on component mount
-	useEffect(() => {
+	const fetchHistory = () => {
 		window.electronAPI?.getHistory().then(setHistory);
+	};
+
+	// Fetch history on component mount and listen for refresh events
+	useEffect(() => {
+		fetchHistory(); // Initial fetch
+		// Listen for F1 press from the main process to refresh
+		window.electronAPI?.onRefreshHistory(fetchHistory);
 	}, []);
 
 	const formatAndNavigate = (inputUrl: string) => {
 		if (!inputUrl.trim()) return;
-
 		let formattedUrl = inputUrl.trim();
 		if (!/^(https?:\/\/)/.test(formattedUrl)) {
 			formattedUrl = `https://${formattedUrl}`;
 		}
-
 		try {
-			// Test if it's a valid URL before sending
 			new URL(formattedUrl);
 			window.electronAPI?.navigateToUrl(formattedUrl);
 		} catch (error) {
@@ -57,9 +61,8 @@ export default function App() {
 		e: MouseEvent<HTMLButtonElement>,
 		urlToRemove: string
 	) => {
-		e.stopPropagation(); // Prevent navigation when clicking the 'X'
+		e.stopPropagation();
 		window.electronAPI?.removeHistoryItem(urlToRemove);
-		// Update UI instantly for a smooth experience
 		setHistory((currentHistory) =>
 			currentHistory.filter((item) => item.url !== urlToRemove)
 		);
@@ -68,7 +71,6 @@ export default function App() {
 	return (
 		<div className="h-dvh bg-white dark:bg-black flex flex-col items-center p-8 font-sans">
 			<div className="w-full max-w-xl flex flex-col h-full">
-				{/* Branding and Input Section */}
 				<div className="flex-shrink-0 text-center">
 					<h1 className="text-5xl font-bold tracking-tighter text-black dark:text-white">
 						Chromini
@@ -81,19 +83,18 @@ export default function App() {
 							type="text"
 							value={url}
 							onChange={(e) => setUrl(e.target.value)}
-							className="w-full px-1 py-3 text-lg text-center transition-colors
-                                    bg-transparent
-                                    text-black dark:text-white
-                                    border-b border-gray-300 dark:border-gray-700
-                                    focus:outline-none focus:border-black dark:focus:border-white"
+							className="w-full px-1 py-3 text-lg text-left transition-colors
+                                     bg-transparent 
+                                     text-black dark:text-white
+                                     border-b border-gray-300 dark:border-gray-700
+                                     focus:outline-none focus:border-black dark:focus:border-white"
 							autoFocus
 						/>
 					</form>
 				</div>
 
-				{/* History Section */}
 				{history.length > 0 && (
-					<div className="mt-10 flex-grow min-h-0 flex flex-col">
+					<div className="group mt-10 flex-grow min-h-0 flex flex-col">
 						<h2 className="text-xs text-left text-gray-500 dark:text-gray-600 font-medium uppercase tracking-wider mb-3 px-3 flex-shrink-0">
 							Recent
 						</h2>
@@ -104,7 +105,6 @@ export default function App() {
 										onClick={() => handleHistoryClick(item.url)}
 										className="group w-full text-left p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors flex items-center justify-between"
 									>
-										{/* URL and Title */}
 										<div className="truncate w-11/12">
 											<p className="text-sm text-black dark:text-white truncate">
 												{item.title}
@@ -113,7 +113,6 @@ export default function App() {
 												{item.url}
 											</p>
 										</div>
-										{/* Delete Button - visible on group hover */}
 										<button
 											onClick={(e) => handleHistoryRemove(e, item.url)}
 											className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
@@ -128,7 +127,6 @@ export default function App() {
 					</div>
 				)}
 
-				{/* Footer with hints */}
 				<div className="mt-auto flex-shrink-0 pt-6">
 					<div className="flex items-center justify-center gap-x-4 text-xs text-gray-500 dark:text-gray-600">
 						<p>
@@ -154,6 +152,12 @@ export default function App() {
 								F5
 							</b>{" "}
 							Reload
+						</p>
+						<p>
+							<b className="font-semibold text-gray-700 dark:text-gray-400">
+								F11
+							</b>{" "}
+							Fullscreen
 						</p>
 						<p>
 							<b className="font-semibold text-gray-700 dark:text-gray-400">
