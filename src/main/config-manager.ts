@@ -20,6 +20,25 @@ const DEFAULT_CONFIG: Config = {
 	history: [],
 };
 
+// --- New Helper Function ---
+// Normalizes a URL for more reliable comparison.
+// Removes hash, and trailing slash.
+function normalizeUrl(urlString: string): string {
+	try {
+		const url = new URL(urlString);
+		url.hash = ""; // Remove fragment identifier
+		let pathname = url.pathname;
+		// Remove trailing slash if it's not the root
+		if (pathname.length > 1 && pathname.endsWith("/")) {
+			pathname = pathname.slice(0, -1);
+		}
+		return `${url.protocol}//${url.host}${pathname}${url.search}`;
+	} catch {
+		// If URL is invalid, return as is
+		return urlString;
+	}
+}
+
 // Ensure the config directory and cache directory exist
 function ensureDirsExist() {
 	if (!fs.existsSync(CONFIG_DIR)) {
@@ -64,12 +83,19 @@ export function addHistoryItem(item: {
 	favicon: string;
 }) {
 	const config = getConfig();
-	// Avoid duplicate entries at the top
-	const existingIndex = config.history.findIndex((h) => h.url === item.url);
+	const normalizedUrl = normalizeUrl(item.url);
+
+	// Find and remove any existing entry with the same normalized URL
+	// This ensures uniqueness and moves the item to the top.
+	const existingIndex = config.history.findIndex(
+		(h) => normalizeUrl(h.url) === normalizedUrl
+	);
+
 	if (existingIndex > -1) {
 		config.history.splice(existingIndex, 1);
 	}
 
+	// Add the new (or updated) item to the beginning of the list
 	config.history.unshift(item);
 	config.history = config.history.slice(0, 50); // Keep last 50
 	saveConfig(config);
