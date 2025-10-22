@@ -1,6 +1,6 @@
 /* src/main/view-manager.ts */
 
-import { BrowserWindow, BrowserView } from "electron";
+import { BrowserWindow, BrowserView, shell } from "electron"; // shell is already imported
 import path from "path";
 import { fileURLToPath } from "url";
 import { addHistoryItem } from "./config-manager";
@@ -82,6 +82,19 @@ export function createWelcomeView() {
 	mainWindow.addBrowserView(welcomeView);
 	adjustViewBounds(welcomeView);
 	welcomeView.webContents.loadURL(WELCOME_URL);
+
+	// --- CORRECT WAY TO HANDLE EXTERNAL LINKS (target="_blank") ---
+	// This handler intercepts requests to open new windows.
+	welcomeView.webContents.setWindowOpenHandler(({ url }) => {
+		// Check if the URL is external
+		if (url.startsWith("http:") || url.startsWith("https:")) {
+			// Open the URL in the user's default browser
+			shell.openExternal(url);
+		}
+		// Deny the request to open a new Electron window
+		return { action: "deny" };
+	});
+
 	showActiveView();
 }
 
@@ -93,6 +106,22 @@ export function createView(url: string) {
 			contextIsolation: true,
 			webSecurity: true,
 		},
+	});
+
+	// --- CORRECT WAY TO HANDLE EXTERNAL LINKS (target="_blank") ---
+	// This handler intercepts requests to open new windows.
+	view.webContents.setWindowOpenHandler(({ url }) => {
+		if (url.startsWith("http:") || url.startsWith("https:")) {
+			shell.openExternal(url);
+		}
+		return { action: "deny" };
+	});
+
+	// This handles navigation within the same view (e.g., non-target blank links)
+	view.webContents.on("will-navigate", (event, navigationUrl) => {
+		const parsedUrl = new URL(navigationUrl);
+		// This logic might be adjusted based on desired in-app navigation behavior
+		// For a simple browser, you might allow all navigation within the view
 	});
 
 	views.push(view);
@@ -161,7 +190,7 @@ export function closeActiveView() {
 	if (views.length === 0) {
 		activeViewIndex = -1;
 	} else {
-		// Otherwise, ensure the index is still valid (points to the new last tab if needed)
+		// Otherwise, ensure the index is still valid
 		if (activeViewIndex >= views.length) {
 			activeViewIndex = views.length - 1;
 		}
