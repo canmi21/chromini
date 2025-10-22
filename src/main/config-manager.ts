@@ -57,7 +57,7 @@ export function saveConfig(config: Config) {
 	}
 }
 
-// Add a new entry to the history, keeping only the last 10
+// Add a new entry to the history, keeping only the last 50
 export function addHistoryItem(item: {
 	url: string;
 	title: string;
@@ -71,6 +71,6 @@ export function addHistoryItem(item: {
 	}
 
 	config.history.unshift(item);
-	config.history = config.history.slice(0, 10); // Keep last 10
+	config.history = config.history.slice(0, 50); // Keep last 50
 	saveConfig(config);
 }
