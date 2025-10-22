@@ -1,15 +1,21 @@
 /* src/main/main.ts */
 
-import { app } from "electron";
+import { app, session } from "electron"; // Import the 'session' module
 import { setupIpcHandlers } from "./ipc-handler";
 import { registerShortcuts, unregisterShortcuts } from "./shortcuts";
 import { createMainWindow, getWindowCount } from "./window-manager";
-import { createAppMenu } from "./app-menu"; // Import the new menu creator
+import { createAppMenu } from "./app-menu";
 
 app.whenReady().then(() => {
+	// Get the default user agent string.
+	const userAgent = session.defaultSession.getUserAgent();
+	const chromeUserAgent = userAgent.replace(/Electron\/[\d\.]+\s/, "");
+	// Set the modified user agent for all future requests.
+	session.defaultSession.setUserAgent(chromeUserAgent);
+
 	setupIpcHandlers();
 	registerShortcuts();
-	createAppMenu(); // Set the application menu
+	createAppMenu();
 	createMainWindow();
 
 	app.on("activate", () => {
