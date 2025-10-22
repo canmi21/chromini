@@ -12,4 +12,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	removeHistoryItem: (url: string) => {
 		ipcRenderer.send("remove-history-item", url);
 	},
+	// Listens for an event from main process to refresh history
+	onRefreshHistory: (callback: () => void) => {
+		ipcRenderer.on("refresh-history", callback);
+	},
 });
