@@ -6,9 +6,40 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  setup:
+    runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.pkg.outputs.version }}
+      should_build: ${{ steps.check_tag.outputs.exists == 'false' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Get version from package.json
+        id: pkg
+        run: echo "version=v$(node -p 'require(\"./package.json\").version')" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Check if tag exists
+        id: check_tag
+        run: |
+          if git ls-remote --tags origin | grep -q "refs/tags/${{ steps.pkg.outputs.version }}"; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "> Tag ${{ steps.pkg.outputs.version }} already exists, skipping build."
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "> Tag ${{ steps.pkg.outputs.version }} does not exist, proceeding with build."
+          fi
+        shell: bash
+
+  build:
+    needs: setup
+    if: needs.setup.outputs.should_build == 'true'
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
@@ -28,28 +59,6 @@ jobs:
         with:
           node-version: '24'
           cache: 'pnpm'
-
-      - name: Get version from package.json
-        id: pkg
-        run: echo "version=v$(node -p 'require(\"./package.json\").version')" >> $GITHUB_OUTPUT
-        shell: bash
-
-      - name: Check if tag exists
-        id: check_tag
-        run: |
-          if git ls-remote --tags origin | grep -q "refs/tags/${{ steps.pkg.outputs.version }}"; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-          fi
-        shell: bash
-
-      - name: Stop if tag exists
-        if: steps.check_tag.outputs.exists == 'true'
-        run: |
-          echo "> Tag ${{ steps.pkg.outputs.version }} already exists, skipping build."
-          exit 0
-        shell: bash
 
       - name: Install dependencies
         run: pnpm install
@@ -75,11 +84,12 @@ jobs:
             dist/*.dmg
             dist/*.zip
             dist/*.AppImage
+            dist/*.tar.gz
             dist/*.exe
           if-no-files-found: error
 
   release:
-    needs: build
+    needs: [setup, build]
     runs-on: ubuntu-latest
 
     steps:
@@ -90,8 +100,8 @@ jobs:
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
-          git tag ${{ needs.build.outputs.version }}
-          git push origin ${{ needs.build.outputs.version }}
+          git tag ${{ needs.setup.outputs.version }}
+          git push origin ${{ needs.setup.outputs.version }}
 
       - name: Download Artifacts
         uses: actions/download-artifact@v4
@@ -101,8 +111,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ needs.build.outputs.version }}
-          name: Release ${{ needs.build.outputs.version }}
+          tag_name: ${{ needs.setup.outputs.version }}
+          name: Release ${{ needs.setup.outputs.version }}
           files: artifacts/**/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
