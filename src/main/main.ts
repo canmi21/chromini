@@ -1,210 +1,55 @@
 /* src/main/main.ts */
 
-import { app, BrowserWindow, ipcMain, globalShortcut } from "electron";
+import { app, BrowserWindow } from "electron";
 import path from "path";
 import { fileURLToPath } from "url";
+import { getConfig, saveConfig, CACHE_PATH } from "./config-manager";
+import { setMainWindow, createWelcomeView, destroyViews } from "./view-manager";
+import { setupIpcHandlers } from "./ipc-handler";
+import { registerShortcuts, unregisterShortcuts } from "./shortcuts";
 
+// Recreate __dirname for ES Module compatibility
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
+// Set persistent cache path before app is ready
+app.setPath("userData", CACHE_PATH);
 
-let mainWindow: BrowserWindow | null = null;
-const tabs: BrowserWindow[] = [];
-let currentTabIndex = 0;
-
-// create url input window
 function createMainWindow() {
-	mainWindow = new BrowserWindow({
-		width: 600,
-		height: 400,
-		resizable: false,
+	const config = getConfig();
+	const { width, height } = config.windowBounds;
+
+	const mainWindow = new BrowserWindow({
+		width,
+		height,
 		webPreferences: {
+			// Now __dirname is correctly defined here
 			preload: path.join(__dirname, "preload.js"),
 			contextIsolation: true,
 			nodeIntegration: false,
-			webSecurity: true,
 		},
 	});
 
-	// load react app
-	if (isDev) {
-		mainWindow.loadURL("http://localhost:5173");
-		mainWindow.webContents.openDevTools();
-	} else {
-		mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
-	}
+	setMainWindow(mainWindow);
+	createWelcomeView();
 
+	// Save window size on close for persistence
+	mainWindow.on("close", () => {
+		const [width, height] = mainWindow.getSize();
+		const currentConfig = getConfig();
+		currentConfig.windowBounds = { width, height };
+		saveConfig(currentConfig);
+	});
+
+	// Clean up views when window is closed
 	mainWindow.on("closed", () => {
-		mainWindow = null;
-		// if no tabs, quit app
-		if (tabs.length === 0) {
-			app.quit();
-		}
+		destroyViews();
 	});
 }
-
-// create new tab
-function createTab(url: string) {
-	const tab = new BrowserWindow({
-		width: 1200,
-		height: 800,
-		show: false,
-		webPreferences: {
-			nodeIntegration: false,
-			contextIsolation: true,
-			devTools: true,
-			webSecurity: true,
-		},
-	});
-
-	// load url
-	tab.loadURL(url).catch((err) => {
-		console.error("Failed to load URL:", err);
-	});
-
-	// show when ready
-	tab.once("ready-to-show", () => {
-		tab.show();
-		tab.focus();
-	});
-
-	// handle tab close
-	tab.on("closed", () => {
-		const index = tabs.indexOf(tab);
-		if (index > -1) {
-			tabs.splice(index, 1);
-		}
-
-		// update current tab index
-		if (currentTabIndex >= tabs.length) {
-			currentTabIndex = Math.max(0, tabs.length - 1);
-		}
-
-		// if no tabs left, show main window or quit
-		if (tabs.length === 0) {
-			if (mainWindow && !mainWindow.isDestroyed()) {
-				mainWindow.show();
-				mainWindow.focus();
-			} else {
-				app.quit();
-			}
-		} else {
-			// focus on current tab
-			focusCurrentTab();
-		}
-	});
-
-	tabs.push(tab);
-	currentTabIndex = tabs.length - 1;
-
-	// hide main window when first tab is created
-	if (mainWindow && !mainWindow.isDestroyed()) {
-		mainWindow.hide();
-	}
-
-	return tab;
-}
-
-// focus current tab
-function focusCurrentTab() {
-	if (tabs.length > 0 && tabs[currentTabIndex] && !tabs[currentTabIndex].isDestroyed()) {
-		tabs[currentTabIndex].show();
-		tabs[currentTabIndex].focus();
-	}
-}
-
-// navigate to previous tab
-function previousTab() {
-	if (tabs.length <= 1) return;
-
-	currentTabIndex = (currentTabIndex - 1 + tabs.length) % tabs.length;
-	focusCurrentTab();
-}
-
-// navigate to next tab
-function nextTab() {
-	if (tabs.length <= 1) return;
-
-	currentTabIndex = (currentTabIndex + 1) % tabs.length;
-	focusCurrentTab();
-}
-
-// show main window (url input)
-function showMainWindow() {
-	if (!mainWindow || mainWindow.isDestroyed()) {
-		createMainWindow();
-	} else {
-		mainWindow.show();
-		mainWindow.focus();
-	}
-}
-
-// reload current tab
-function reloadCurrentTab() {
-	if (tabs.length > 0 && tabs[currentTabIndex] && !tabs[currentTabIndex].isDestroyed()) {
-		tabs[currentTabIndex].webContents.reloadIgnoringCache();
-	}
-}
-
-// toggle devtools for current tab
-function toggleDevTools() {
-	if (tabs.length > 0 && tabs[currentTabIndex] && !tabs[currentTabIndex].isDestroyed()) {
-		tabs[currentTabIndex].webContents.toggleDevTools();
-	}
-}
-
-// register global shortcuts
-function registerGlobalShortcuts() {
-	// unregister all first
-	globalShortcut.unregisterAll();
-
-	// F1 - back to url input
-	globalShortcut.register("F1", () => {
-		showMainWindow();
-	});
-
-	// F2 - previous tab
-	globalShortcut.register("F2", () => {
-		previousTab();
-	});
-
-	// F3 - next tab
-	globalShortcut.register("F3", () => {
-		nextTab();
-	});
-
-	// F5 - reload current tab
-	globalShortcut.register("F5", () => {
-		reloadCurrentTab();
-	});
-
-	// F12 - toggle devtools
-	globalShortcut.register("F12", () => {
-		toggleDevTools();
-	});
-
-	// Cmd+Option+I for macOS (devtools)
-	if (process.platform === "darwin") {
-		globalShortcut.register("CommandOrControl+Option+I", () => {
-			toggleDevTools();
-		});
-	}
-	// Ctrl+Shift+I for Windows/Linux (devtools)
-	else {
-		globalShortcut.register("Control+Shift+I", () => {
-			toggleDevTools();
-		});
-	}
-}
-
-// handle url navigation from renderer
-ipcMain.on("navigate-to-url", (_event, url: string) => {
-	createTab(url);
-});
 
 app.whenReady().then(() => {
-	registerGlobalShortcuts();
+	setupIpcHandlers();
+	registerShortcuts();
 	createMainWindow();
 
 	app.on("activate", () => {
@@ -215,12 +60,12 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
-	globalShortcut.unregisterAll();
 	if (process.platform !== "darwin") {
 		app.quit();
 	}
 });
 
 app.on("will-quit", () => {
-	globalShortcut.unregisterAll();
+	// Unregister all shortcuts on quit
+	unregisterShortcuts();
 });
