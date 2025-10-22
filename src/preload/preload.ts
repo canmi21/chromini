@@ -1,9 +1,12 @@
 /* src/preload/preload.ts */
 
-const { contextBridge, ipcRenderer } = require("electron");
+import { contextBridge, ipcRenderer } from "electron";
 
 contextBridge.exposeInMainWorld("electronAPI", {
 	navigateToUrl: (url: string) => {
 		ipcRenderer.send("navigate-to-url", url);
+	},
+	getHistory: (): Promise<any[]> => {
+		return ipcRenderer.invoke("get-history");
 	},
 });
