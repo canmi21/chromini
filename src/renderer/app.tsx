@@ -1,7 +1,7 @@
 /* src/renderer/app.tsx */
 
 import { useState, FormEvent, useEffect, MouseEvent } from "react";
-import { X } from "lucide-react";
+import { X, Github } from "lucide-react";
 
 interface HistoryItem {
 	url: string;
@@ -70,9 +70,10 @@ export default function App() {
 	};
 
 	return (
-		<div className="h-dvh bg-white dark:bg-black flex flex-col items-center p-8 font-sans">
+		<div className="relative h-dvh bg-white dark:bg-black flex flex-col items-center p-8 font-sans overflow-hidden">
 			<div className="w-full max-w-xl flex flex-col h-full">
-				<div className="flex-shrink-0 text-center">
+				{/* Added mt-16 to push this block down */}
+				<div className="flex-shrink-0 text-center mt-16">
 					<h1 className="text-5xl font-bold tracking-tighter text-black dark:text-white">
 						Chromini
 					</h1>
@@ -128,7 +129,8 @@ export default function App() {
 					</div>
 				)}
 
-				<div className="mt-auto flex-shrink-0 pt-6">
+				{/* Footer with hints */}
+				<div className="mt-auto flex-shrink-0 pt-6 text-center">
 					<div className="flex flex-wrap items-center justify-center gap-x-4 text-xs text-gray-500 dark:text-gray-600">
 						<p>
 							<b className="font-semibold text-gray-700 dark:text-gray-400">
@@ -175,6 +177,17 @@ export default function App() {
 					</div>
 				</div>
 			</div>
+
+			{/* Peeking GitHub Icon Link */}
+			<a
+				href="https://github.com/canmi21/chromini"
+				target="_blank"
+				rel="noopener noreferrer"
+				className="absolute bottom-7 right-0 transform -rotate-45 text-gray-400 dark:text-gray-600 hover:text-black dark:hover:text-white hover:rotate-0 hover:scale-110 transition-all duration-300"
+				aria-label="View source on GitHub"
+			>
+				<Github className="h-8 w-8" />
+			</a>
 		</div>
 	);
 }
