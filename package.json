@@ -1,7 +1,10 @@
 {
 	"name": "chromini",
+	"productName": "Chromini",
 	"version": "1.0.15",
 	"type": "module",
+	"description": "A minimalist, developer-focused browser built with Electron and React.",
+	"author": "canmi",
 	"main": "dist-electron/main.js",
 	"scripts": {
 		"dev": "vite",
@@ -36,5 +39,30 @@
 		"lucide-react": "^0.546.0",
 		"react": "^18.3.1",
 		"react-dom": "^18.3.1"
+	},
+	"build": {
+		"appId": "net.canmi.chromini",
+		"productName": "Chromini",
+		"files": [
+			"dist/",
+			"dist-electron/",
+			"package.json"
+		],
+		"mac": {
+			"category": "public.app-category.developer-tools",
+			"target": [
+				"dmg",
+				"zip"
+			],
+			"icon": "build/icon.icns"
+		},
+		"win": {
+			"target": "nsis",
+			"icon": "build/icon.ico"
+		},
+		"linux": {
+			"target": "AppImage",
+			"icon": "build/icon.png"
+		}
 	}
 }
