@@ -7,6 +7,7 @@ import {
 	nextView,
 	reloadActiveView,
 	toggleActiveViewDevTools,
+	toggleFullScreen, // Import the new function
 } from "./view-manager";
 
 export function registerShortcuts() {
@@ -16,6 +17,7 @@ export function registerShortcuts() {
 	globalShortcut.register("F2", previousView);
 	globalShortcut.register("F3", nextView);
 	globalShortcut.register("F5", reloadActiveView);
+	globalShortcut.register("F11", toggleFullScreen);
 	globalShortcut.register("F12", toggleActiveViewDevTools);
 
 	// Standard DevTools shortcuts
