@@ -100,3 +100,15 @@ export function addHistoryItem(item: {
 	config.history = config.history.slice(0, 50); // Keep last 50
 	saveConfig(config);
 }
+
+// Removes a specific item from history by its URL
+export function removeHistoryItem(urlToRemove: string) {
+	const config = getConfig();
+	const normalizedUrlToRemove = normalizeUrl(urlToRemove);
+
+	config.history = config.history.filter(
+		(item) => normalizeUrl(item.url) !== normalizedUrlToRemove
+	);
+
+	saveConfig(config);
+}
