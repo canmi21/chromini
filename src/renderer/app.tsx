@@ -1,11 +1,10 @@
 /* src/renderer/app.tsx */
 
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect } from "react";
 
-// extend window type
 declare global {
 	interface Window {
-		electronAPI: {
+		electronAPI?: {
 			navigateToUrl: (url: string) => void;
 		};
 	}
@@ -14,43 +13,49 @@ declare global {
 export default function App() {
 	const [url, setUrl] = useState("");
 	const [error, setError] = useState("");
+	const [apiReady, setApiReady] = useState(false);
 
-	// validate and format url
+	// check if electron api is ready
+	useEffect(() => {
+		if (window.electronAPI) {
+			setApiReady(true);
+			console.log("Electron API is ready");
+		} else {
+			console.error("Electron API not found!");
+			setError("Electron API not available");
+		}
+	}, []);
+
 	const formatUrl = (input: string): string => {
 		const trimmed = input.trim();
+		if (!trimmed) return trimmed;
 
-		// if empty, return as is
-		if (!trimmed) {
+		if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
 			return trimmed;
 		}
 
-		// check if already has protocol
-		if (
-			trimmed.startsWith("http://") ||
-			trimmed.startsWith("https://") ||
-			trimmed.startsWith("file://")
-		) {
-			return trimmed;
-		}
-
-		// add https by default
 		return `https://${trimmed}`;
 	};
 
-	// validate url format
 	const isValidUrl = (urlString: string): boolean => {
 		try {
 			const url = new URL(urlString);
-			// check if protocol is http, https, or file
-			return ["http:", "https:", "file:"].includes(url.protocol);
+			return ["http:", "https:"].includes(url.protocol);
 		} catch {
 			return false;
 		}
 	};
 
-	// handle form submission
 	const handleSubmit = (e: FormEvent) => {
 		e.preventDefault();
+
+		console.log("Form submitted, URL:", url);
+
+		if (!apiReady || !window.electronAPI) {
+			setError("Electron API not ready");
+			console.error("Electron API not available");
+			return;
+		}
 
 		if (!url.trim()) {
 			setError("Please enter a URL");
@@ -58,44 +63,44 @@ export default function App() {
 		}
 
 		const formattedUrl = formatUrl(url);
+		console.log("Formatted URL:", formattedUrl);
 
-		// validate url
 		if (!isValidUrl(formattedUrl)) {
 			setError("Invalid URL format");
 			return;
 		}
 
-		// navigate
-		window.electronAPI.navigateToUrl(formattedUrl);
+		try {
+			window.electronAPI.navigateToUrl(formattedUrl);
+			console.log("Navigation requested");
+			setUrl("");
+			setError("");
+		} catch (err) {
+			console.error("Navigation error:", err);
+			setError("Failed to navigate");
+		}
 	};
 
 	return (
-		<div
-			className="min-h-screen flex items-center justify-center p-8"
-			style={{ backgroundColor: "var(--color-bg)" }}
-		>
+		<div className="min-h-screen bg-white dark:bg-black flex items-center justify-center p-8">
 			<div className="w-full max-w-md">
-				{/* header */}
 				<div className="mb-12 text-center">
-					<h1
-						className="text-5xl font-bold tracking-tight mb-3"
-						style={{ color: "var(--color-text)" }}
-					>
+					<h1 className="text-5xl font-bold tracking-tight text-black dark:text-white mb-3">
 						Browser
 					</h1>
-					<p
-						className="text-sm"
-						style={{ color: "var(--color-text-secondary)" }}
-					>
+					<p className="text-sm text-gray-600 dark:text-gray-400">
 						Enter a URL to begin
 					</p>
+					{!apiReady && (
+						<p className="text-xs text-red-600 dark:text-red-400 mt-2">
+							⚠️ Electron API not ready
+						</p>
+					)}
 				</div>
 
-				{/* url input form */}
 				<form onSubmit={handleSubmit} className="space-y-4">
 					<div>
 						<input
-							id="url-input"
 							type="text"
 							value={url}
 							onChange={(e) => {
@@ -103,100 +108,37 @@ export default function App() {
 								setError("");
 							}}
 							placeholder="example.com"
-							className="w-full px-4 py-3 text-base rounded-lg transition-all focus:outline-none focus:ring-2"
-							style={{
-								backgroundColor: "var(--color-input-bg)",
-								color: "var(--color-text)",
-								borderWidth: "1px",
-								borderColor: "var(--color-border)",
-								"--tw-ring-color": "var(--color-focus-ring)",
-							}}
+							className="w-full px-4 py-3 text-base rounded-lg transition-all 
+							         bg-white dark:bg-black 
+							         text-black dark:text-white
+							         border border-gray-300 dark:border-gray-700
+							         focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white"
 							autoFocus
 						/>
-
 						{error && (
-							<p
-								className="mt-2 text-sm"
-								style={{ color: "var(--color-error)" }}
-							>
-								{error}
-							</p>
+							<p className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>
 						)}
 					</div>
 
 					<button
 						type="submit"
-						className="w-full font-medium py-3 px-4 rounded-lg transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2"
-						style={{
-							backgroundColor: "var(--color-button-bg)",
-							color: "var(--color-button-text)",
-							"--tw-ring-color": "var(--color-focus-ring)",
-							"--tw-ring-offset-color": "var(--color-bg)",
-						}}
-						onMouseEnter={(e) => {
-							e.currentTarget.style.backgroundColor =
-								"var(--color-button-hover)";
-						}}
-						onMouseLeave={(e) => {
-							e.currentTarget.style.backgroundColor = "var(--color-button-bg)";
-						}}
+						disabled={!apiReady}
+						className="w-full font-medium py-3 px-4 rounded-lg transition-colors
+						         bg-black dark:bg-white 
+						         text-white dark:text-black
+						         hover:bg-gray-800 dark:hover:bg-gray-200
+						         disabled:opacity-50 disabled:cursor-not-allowed"
 					>
 						Continue →
 					</button>
 				</form>
 
-				{/* footer tips */}
-				<div className="mt-12 text-center">
-					<p
-						className="text-xs"
-						style={{ color: "var(--color-text-secondary)" }}
-					>
-						macOS:{" "}
-						<kbd
-							className="px-1.5 py-0.5 text-xs rounded"
-							style={{
-								backgroundColor: "var(--color-kbd-bg)",
-								borderWidth: "1px",
-								borderColor: "var(--color-kbd-border)",
-							}}
-						>
-							⌘
-						</kbd>{" "}
-						+{" "}
-						<kbd
-							className="px-1.5 py-0.5 text-xs rounded"
-							style={{
-								backgroundColor: "var(--color-kbd-bg)",
-								borderWidth: "1px",
-								borderColor: "var(--color-kbd-border)",
-							}}
-						>
-							⌥
-						</kbd>{" "}
-						+{" "}
-						<kbd
-							className="px-1.5 py-0.5 text-xs rounded"
-							style={{
-								backgroundColor: "var(--color-kbd-bg)",
-								borderWidth: "1px",
-								borderColor: "var(--color-kbd-border)",
-							}}
-						>
-							I
-						</kbd>{" "}
-						or{" "}
-						<kbd
-							className="px-1.5 py-0.5 text-xs rounded"
-							style={{
-								backgroundColor: "var(--color-kbd-bg)",
-								borderWidth: "1px",
-								borderColor: "var(--color-kbd-border)",
-							}}
-						>
-							F12
-						</kbd>{" "}
-						for DevTools
-					</p>
+				<div className="mt-12 space-y-2 text-xs text-gray-500 dark:text-gray-600">
+					<p>F1 - Back to URL input</p>
+					<p>F2 - Previous tab</p>
+					<p>F3 - Next tab</p>
+					<p>F5 - Reload page</p>
+					<p>F12 - Toggle DevTools</p>
 				</div>
 			</div>
 		</div>
