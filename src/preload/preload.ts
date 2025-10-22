@@ -9,4 +9,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	getHistory: (): Promise<any[]> => {
 		return ipcRenderer.invoke("get-history");
 	},
+	removeHistoryItem: (url: string) => {
+		ipcRenderer.send("remove-history-item", url);
+	},
 });
