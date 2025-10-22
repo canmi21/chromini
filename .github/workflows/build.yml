@@ -40,25 +40,25 @@ jobs:
           $version = (node -p "require('./package.json').version")
           echo "version=v$version" >> $env:GITHUB_OUTPUT
 
-      - name: Set version
+      - name: Determine version
         id: pkg
+        shell: bash
         run: |
           if [ "${{ runner.os }}" = "Windows" ]; then
             echo "version=${{ steps.pkg_win.outputs.version }}" >> $GITHUB_OUTPUT
           else
             echo "version=${{ steps.pkg_unix.outputs.version }}" >> $GITHUB_OUTPUT
           fi
-        shell: bash
 
       - name: Check if tag exists
         id: check_tag
+        shell: bash
         run: |
           if git ls-remote --tags origin | grep -q "refs/tags/${{ steps.pkg.outputs.version }}"; then
             echo "exists=true" >> $GITHUB_OUTPUT
           else
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
-        shell: bash
 
       - name: Stop if tag exists
         if: steps.check_tag.outputs.exists == 'true'
@@ -71,6 +71,7 @@ jobs:
         run: pnpm install
 
       - name: Build application
+        shell: bash
         run: |
           if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
             pnpm electron:build --mac --publish never
@@ -81,13 +82,16 @@ jobs:
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
 
-      - name: Rename artifacts
-        run: |
-          mkdir release
-          find dist -type f -exec bash -c 'f="{}"; base=$(basename "$f"); mv "$f" "release/${base,,}"' \;
+      - name: Collect and rename artifacts
         shell: bash
+        run: |
+          mkdir -p release
+          find dist -type f -exec bash -c '
+            f="{}"
+            base=$(basename "$f")
+            mv "$f" "release/${base,,}"
+          ' \;
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -98,11 +102,12 @@ jobs:
   release:
     needs: build
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -123,7 +128,7 @@ jobs:
         with:
           path: artifacts
 
-      - name: Create Release
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.pkg.outputs.version }}
