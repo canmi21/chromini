@@ -1,3 +1,5 @@
+# .github/workflows/build.yml
+
 name: Build & Release
 
 on:
@@ -5,6 +7,8 @@ on:
 
 jobs:
   build:
+    outputs:
+      version: ${{ steps.pkg.outputs.version }}
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
@@ -25,29 +29,10 @@ jobs:
           node-version: '24'
           cache: 'pnpm'
 
-      - name: Get version from package.json (Unix)
-        id: pkg_unix
-        if: runner.os != 'Windows'
+      - name: Get version from package.json
+        id: pkg
         run: echo "version=v$(node -p 'require(\"./package.json\").version')" >> $GITHUB_OUTPUT
         shell: bash
-
-      - name: Get version from package.json (Windows)
-        id: pkg_win
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $version = (node -p "require('./package.json').version")
-          echo "version=v$version" >> $env:GITHUB_OUTPUT
-
-      - name: Determine version
-        id: pkg
-        shell: bash
-        run: |
-          if [ "${{ runner.os }}" = "Windows" ]; then
-            echo "version=${{ steps.pkg_win.outputs.version }}" >> $GITHUB_OUTPUT
-          else
-            echo "version=${{ steps.pkg_unix.outputs.version }}" >> $GITHUB_OUTPUT
-          fi
 
       - name: Check if tag exists
         id: check_tag
@@ -82,33 +67,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Collect and rename artifacts (macOS/Linux compatible)
-        if: runner.os != 'Windows'
-        shell: bash
-        run: |
-          mkdir -p release
-          find dist -type f -name "Chromini-*" -exec bash -c '
-            f="{}"
-            base=$(basename "$f")
-            lower_base=$(echo "$base" | tr "[:upper:]" "[:lower:]")
-            mv "$f" "release/$lower_base"
-          ' \;
-
-      - name: Collect and rename artifacts (Windows compatible)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          New-Item -Path "release" -ItemType Directory -Force
-          Get-ChildItem -Path "dist" -Filter "Chromini-*" | ForEach-Object {
-            $newName = $_.Name.ToLower()
-            Move-Item -Path $_.FullName -Destination "release/$newName"
-          }
-
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: chromini-${{ matrix.os }}
-          path: release/
+          path: |
+            dist/*.dmg
+            dist/*.zip
+            dist/*.AppImage
+            dist/*.exe
+          if-no-files-found: error
 
   release:
     needs: build
@@ -118,22 +86,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Get version from package.json
-        id: pkg
-        run: echo "version=v$(node -p 'require(\"./package.json\").version')" >> $GITHUB_OUTPUT
-        shell: bash
-
       - name: Create tag
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
-          git tag ${{ steps.pkg.outputs.version }}
-          git push origin ${{ steps.pkg.outputs.version }}
+          git tag ${{ needs.build.outputs.version }}
+          git push origin ${{ needs.build.outputs.version }}
 
       - name: Download Artifacts
         uses: actions/download-artifact@v4
@@ -143,8 +101,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.pkg.outputs.version }}
-          name: ${{ steps.pkg.outputs.version }}
+          tag_name: ${{ needs.build.outputs.version }}
+          name: Release ${{ needs.build.outputs.version }}
           files: artifacts/**/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
