@@ -13,7 +13,6 @@ interface ViewItem {
 }
 export const allViews: ViewItem[] = [];
 let activeViewIndex = -1;
-// -----------------------------------------------------------
 
 // Recreate __dirname for ES Module compatibility
 const __filename = fileURLToPath(import.meta.url);
@@ -74,6 +73,7 @@ export function createWelcomeView(parentWindow: BrowserWindow) {
 	const welcomeView = new BrowserView({
 		webPreferences: {
 			preload: path.join(__dirname, "preload.js"),
+			webSecurity: false, // Disables same-origin policy
 		},
 	});
 
@@ -94,7 +94,7 @@ export function createView(url: string, parentWindow: BrowserWindow) {
 	const view = new BrowserView({
 		webPreferences: {
 			contextIsolation: true,
-			webSecurity: true,
+			webSecurity: false, // Disables same-origin policy
 		},
 	});
 
@@ -173,7 +173,6 @@ export function goForward() {
 	}
 }
 
-// --- Restored Functions for Global Shortcuts ---
 export function reloadActiveView() {
 	const activeItem = getActiveView();
 	if (activeItem) {
@@ -194,9 +193,11 @@ export function toggleActiveViewDevTools() {
 	if (activeItem) {
 		activeItem.view.webContents.toggleDevTools();
 	} else {
-		// Fallback for welcome screen
 		const focusedWindow = BrowserWindow.getFocusedWindow();
-		focusedWindow?.webContents.toggleDevTools();
+		const activeView = focusedWindow?.getBrowserViews()[0];
+		if (activeView) {
+			activeView.webContents.toggleDevTools();
+		}
 	}
 }
 
