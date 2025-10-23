@@ -1,6 +1,6 @@
 /* src/main/shortcuts.ts */
 
-import { globalShortcut } from "electron";
+import { globalShortcut, BrowserWindow } from "electron";
 import {
 	previousView,
 	nextView,
@@ -10,31 +10,50 @@ import {
 	reloadActiveView,
 	toggleFullScreen,
 	toggleActiveViewDevTools,
+	showWelcomeViewForFocusedWindow,
 } from "./view-manager";
-import { createMainWindow } from "./window-manager";
+
+// Helper function to apply actions to the focused window
+function applyToFocusedWindow(action: (win: BrowserWindow) => void) {
+	return () => {
+		const focusedWindow = BrowserWindow.getFocusedWindow();
+		if (focusedWindow) {
+			action(focusedWindow);
+		}
+	};
+}
 
 export function registerShortcuts() {
 	globalShortcut.unregisterAll();
 
 	// Window and Tab Management
-	globalShortcut.register("F1", () => createMainWindow()); // F1 for a new empty window
-	globalShortcut.register("F2", previousView);
-	globalShortcut.register("F3", nextView);
-	globalShortcut.register("F4", closeActiveView);
+	globalShortcut.register("F1", showWelcomeViewForFocusedWindow);
+	globalShortcut.register("F2", applyToFocusedWindow(previousView));
+	globalShortcut.register("F3", applyToFocusedWindow(nextView));
+	globalShortcut.register("F4", applyToFocusedWindow(closeActiveView));
 
 	// View Actions
-	globalShortcut.register("F5", reloadActiveView);
-	globalShortcut.register("F11", toggleFullScreen);
-	globalShortcut.register("F12", toggleActiveViewDevTools);
+	globalShortcut.register("F5", applyToFocusedWindow(reloadActiveView));
+	globalShortcut.register("F11", applyToFocusedWindow(toggleFullScreen));
+	globalShortcut.register(
+		"F12",
+		applyToFocusedWindow(toggleActiveViewDevTools)
+	);
 
 	// Browser Navigation
-	globalShortcut.register("CommandOrControl+[", goBack);
-	globalShortcut.register("CommandOrControl+]", goForward);
-	globalShortcut.register("Alt+Left", goBack);
-	globalShortcut.register("Alt+Right", goForward);
+	globalShortcut.register("CommandOrControl+[", applyToFocusedWindow(goBack));
+	globalShortcut.register(
+		"CommandOrControl+]",
+		applyToFocusedWindow(goForward)
+	);
+	globalShortcut.register("Alt+Left", applyToFocusedWindow(goBack));
+	globalShortcut.register("Alt+Right", applyToFocusedWindow(goForward));
 
 	// Standard DevTools
-	globalShortcut.register("CommandOrControl+Shift+I", toggleActiveViewDevTools);
+	globalShortcut.register(
+		"CommandOrControl+Shift+I",
+		applyToFocusedWindow(toggleActiveViewDevTools)
+	);
 }
 
 export function unregisterShortcuts() {
