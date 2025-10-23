@@ -1,6 +1,8 @@
 /* src/preload/preload.ts */
 
-import { contextBridge, ipcRenderer } from "electron";
+// Use require() for CommonJS compatibility.
+const { contextBridge, ipcRenderer } = require("electron");
+import type { IpcRendererEvent } from "electron"; // Import the type for the event
 
 contextBridge.exposeInMainWorld("electronAPI", {
 	navigateToUrl: (url: string) => {
@@ -14,6 +16,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	},
 	// Listens for an event from main process to refresh history
 	onRefreshHistory: (callback: () => void) => {
-		ipcRenderer.on("refresh-history", callback);
+		// We explicitly type the event and mark it as unused with an underscore.
+		ipcRenderer.on("refresh-history", (_event: IpcRendererEvent) => callback());
 	},
 });
