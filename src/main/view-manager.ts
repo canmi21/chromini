@@ -13,6 +13,7 @@ interface ViewItem {
 }
 export const allViews: ViewItem[] = [];
 let activeViewIndex = -1;
+// -----------------------------------------------------------
 
 // Recreate __dirname for ES Module compatibility
 const __filename = fileURLToPath(import.meta.url);
@@ -22,6 +23,36 @@ const isDev = process.env.NODE_ENV === "development";
 const WELCOME_URL = isDev
 	? "http://localhost:5173"
 	: `file://${path.join(__dirname, "../dist/index.html")}`;
+
+export function setMainWindow(win: BrowserWindow) {
+	// --- THIS IS A KEY FIX ---
+	// The 'resize' event might fire before the window is fully ready.
+	// Using 'ready-to-show' and a small delay ensures we get accurate content bounds.
+	win.once("ready-to-show", () => {
+		win.on("resize", () => {
+			const activeItem = getActiveView();
+			// Only resize the view if it belongs to the window being resized
+			if (activeItem && activeItem.parentWindow === win) {
+				adjustViewBounds(activeItem.view, win);
+			} else {
+				// Handle resizing for welcome views as well
+				const currentViews = win.getBrowserViews();
+				if (currentViews.length > 0) {
+					adjustViewBounds(currentViews[0], win);
+				}
+			}
+		});
+	});
+}
+
+// Function to adjust view bounds to fill the window's *content area*
+function adjustViewBounds(view: BrowserView, parentWindow: BrowserWindow) {
+	if (!parentWindow) return;
+	// --- THIS IS THE CRITICAL CHANGE ---
+	// Use getContentBounds() instead of getSize() to get the drawable area below the title bar.
+	const { width, height } = parentWindow.getContentBounds();
+	view.setBounds({ x: 0, y: 0, width, height });
+}
 
 // Attaches the correct view to its parent window and focuses it
 function showActiveView() {
@@ -47,8 +78,7 @@ function showActiveView() {
 		.forEach((v) => parentWindow.removeBrowserView(v));
 	parentWindow.setBrowserView(view);
 
-	const [width, height] = parentWindow.getSize();
-	view.setBounds({ x: 0, y: 0, width, height });
+	adjustViewBounds(view, parentWindow); // Use the corrected function
 	const pageTitle = view.webContents.getTitle();
 	parentWindow.setTitle(pageTitle || "chromini");
 }
@@ -57,11 +87,6 @@ function addViewToRegistry(view: BrowserView, parentWindow: BrowserWindow) {
 	const viewItem: ViewItem = { view, parentWindow };
 	allViews.push(viewItem);
 	activeViewIndex = allViews.length - 1;
-
-	parentWindow.on("resize", () => {
-		const [width, height] = parentWindow.getSize();
-		view.setBounds({ x: 0, y: 0, width, height });
-	});
 
 	view.webContents.setWindowOpenHandler(({ url }) => {
 		shell.openExternal(url);
@@ -73,13 +98,12 @@ export function createWelcomeView(parentWindow: BrowserWindow) {
 	const welcomeView = new BrowserView({
 		webPreferences: {
 			preload: path.join(__dirname, "preload.js"),
-			webSecurity: false, // Disables same-origin policy
+			webSecurity: false,
 		},
 	});
 
 	parentWindow.setBrowserView(welcomeView);
-	const [width, height] = parentWindow.getSize();
-	welcomeView.setBounds({ x: 0, y: 0, width, height });
+	adjustViewBounds(welcomeView, parentWindow); // Use the corrected function
 	welcomeView.webContents.loadURL(WELCOME_URL);
 
 	welcomeView.webContents.setWindowOpenHandler(({ url }) => {
@@ -94,7 +118,7 @@ export function createView(url: string, parentWindow: BrowserWindow) {
 	const view = new BrowserView({
 		webPreferences: {
 			contextIsolation: true,
-			webSecurity: false, // Disables same-origin policy
+			webSecurity: false,
 		},
 	});
 
