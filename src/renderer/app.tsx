@@ -183,7 +183,7 @@ export default function App() {
 				href="https://github.com/canmi21/chromini"
 				target="_blank"
 				rel="noopener noreferrer"
-				className="absolute bottom-7 right-0 transform -rotate-45 text-gray-400 dark:text-gray-600 hover:text-black dark:hover:text-white hover:rotate-0 hover:scale-110 transition-all duration-300"
+				className="absolute bottom-0 right-0 transform -rotate-45 text-gray-400 dark:text-gray-600 hover:text-black dark:hover:text-white hover:rotate-0 hover:scale-110 transition-all duration-300"
 				aria-label="View source on GitHub"
 			>
 				<Github className="h-8 w-8" />
