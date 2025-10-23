@@ -64,9 +64,10 @@ export function createContextMenu(webContents: WebContents) {
 				visible: !params.linkURL, // Only show when not clicking a link
 				click: () => {
 					const currentURL = webContents.getURL();
-					if (currentURL) {
+					if (currentURL && parentWindow) {
 						createMainWindow(currentURL);
-						closeActiveView(); // Close the original tab
+						// Pass the correct window context to closeActiveView
+						closeActiveView(parentWindow);
 					}
 				},
 			},
