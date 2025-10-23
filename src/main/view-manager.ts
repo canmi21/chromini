@@ -6,14 +6,15 @@ import { fileURLToPath } from "url";
 import { addHistoryItem } from "./config-manager";
 import { createContextMenu, createWelcomeContextMenu } from "./context-menu";
 
-// --- Global "Timeline" for all views across all windows ---
-interface ViewItem {
-	view: BrowserView;
-	parentWindow: BrowserWindow;
+// --- NEW DATA STRUCTURE: Per-window tab management ---
+interface TabState {
+	views: BrowserView[];
+	activeIndex: number;
 }
-export const allViews: ViewItem[] = [];
-let activeViewIndex = -1;
+const windowTabs = new Map<BrowserWindow, TabState>();
 // -----------------------------------------------------------
+
+const GITHUB_URL = "https://github.com/canmi21/chromini";
 
 // Recreate __dirname for ES Module compatibility
 const __filename = fileURLToPath(import.meta.url);
@@ -24,74 +25,44 @@ const WELCOME_URL = isDev
 	? "http://localhost:5173"
 	: `file://${path.join(__dirname, "../dist/index.html")}`;
 
-export function setMainWindow(win: BrowserWindow) {
-	// --- THIS IS A KEY FIX ---
-	// The 'resize' event might fire before the window is fully ready.
-	// Using 'ready-to-show' and a small delay ensures we get accurate content bounds.
-	win.once("ready-to-show", () => {
-		win.on("resize", () => {
-			const activeItem = getActiveView();
-			// Only resize the view if it belongs to the window being resized
-			if (activeItem && activeItem.parentWindow === win) {
-				adjustViewBounds(activeItem.view, win);
-			} else {
-				// Handle resizing for welcome views as well
-				const currentViews = win.getBrowserViews();
-				if (currentViews.length > 0) {
-					adjustViewBounds(currentViews[0], win);
-				}
-			}
-		});
-	});
+// Initializes a new window's tab state
+export function initializeWindow(win: BrowserWindow) {
+	windowTabs.set(win, { views: [], activeIndex: -1 });
+	createWelcomeView(win); // Each new window starts with a welcome page
 }
 
-// Function to adjust view bounds to fill the window's *content area*
+// Cleans up a window's tab state when it's closed
+export function cleanupWindow(win: BrowserWindow) {
+	const state = windowTabs.get(win);
+	if (state) {
+		state.views.forEach((view) => (view.webContents as any)?.destroy());
+		windowTabs.delete(win);
+	}
+}
+
 function adjustViewBounds(view: BrowserView, parentWindow: BrowserWindow) {
-	if (!parentWindow) return;
-	// --- THIS IS THE CRITICAL CHANGE ---
-	// Use getContentBounds() instead of getSize() to get the drawable area below the title bar.
+	if (!parentWindow || parentWindow.isDestroyed()) return;
 	const { width, height } = parentWindow.getContentBounds();
 	view.setBounds({ x: 0, y: 0, width, height });
 }
 
-// Attaches the correct view to its parent window and focuses it
-function showActiveView() {
-	if (activeViewIndex < 0 || !allViews[activeViewIndex]) {
-		const focusedWindow = BrowserWindow.getFocusedWindow();
-		if (focusedWindow) {
-			focusedWindow
-				.getBrowserViews()
-				.forEach((v) => focusedWindow.removeBrowserView(v));
-			focusedWindow.setTitle("chromini");
-		}
-		return;
+// Shows the active tab for a specific window
+function showActiveView(win: BrowserWindow) {
+	const state = windowTabs.get(win);
+	if (!state) return;
+
+	win.getBrowserViews().forEach((v) => win.removeBrowserView(v));
+
+	if (state.activeIndex === -1 || !state.views[state.activeIndex]) {
+		// No active tab, show the welcome view
+		createWelcomeView(win);
+		win.setTitle("Chromini");
+	} else {
+		const view = state.views[state.activeIndex];
+		win.setBrowserView(view);
+		adjustViewBounds(view, win);
+		win.setTitle(view.webContents.getTitle() || "Chromini");
 	}
-
-	const { view, parentWindow } = allViews[activeViewIndex];
-
-	if (!parentWindow.isFocused()) {
-		parentWindow.focus();
-	}
-
-	parentWindow
-		.getBrowserViews()
-		.forEach((v) => parentWindow.removeBrowserView(v));
-	parentWindow.setBrowserView(view);
-
-	adjustViewBounds(view, parentWindow); // Use the corrected function
-	const pageTitle = view.webContents.getTitle();
-	parentWindow.setTitle(pageTitle || "chromini");
-}
-
-function addViewToRegistry(view: BrowserView, parentWindow: BrowserWindow) {
-	const viewItem: ViewItem = { view, parentWindow };
-	allViews.push(viewItem);
-	activeViewIndex = allViews.length - 1;
-
-	view.webContents.setWindowOpenHandler(({ url }) => {
-		shell.openExternal(url);
-		return { action: "deny" };
-	});
 }
 
 export function createWelcomeView(parentWindow: BrowserWindow) {
@@ -103,18 +74,27 @@ export function createWelcomeView(parentWindow: BrowserWindow) {
 	});
 
 	parentWindow.setBrowserView(welcomeView);
-	adjustViewBounds(welcomeView, parentWindow); // Use the corrected function
+	adjustViewBounds(welcomeView, parentWindow);
 	welcomeView.webContents.loadURL(WELCOME_URL);
 
+	// Special link handler for the welcome page
 	welcomeView.webContents.setWindowOpenHandler(({ url }) => {
-		shell.openExternal(url);
+		if (url.startsWith("https://github.com/canmi21/chromini")) {
+			shell.openExternal(url); // ONLY the GitHub link opens externally
+		} else {
+			createView(url, parentWindow); // Other links open as new tabs
+		}
 		return { action: "deny" };
 	});
 
+	parentWindow.on("resize", () => adjustViewBounds(welcomeView, parentWindow));
 	createWelcomeContextMenu(welcomeView.webContents);
 }
 
 export function createView(url: string, parentWindow: BrowserWindow) {
+	const state = windowTabs.get(parentWindow);
+	if (!state) return;
+
 	const view = new BrowserView({
 		webPreferences: {
 			contextIsolation: true,
@@ -122,118 +102,127 @@ export function createView(url: string, parentWindow: BrowserWindow) {
 		},
 	});
 
-	addViewToRegistry(view, parentWindow);
-	view.webContents.loadURL(url);
+	// Standard link handler for all web content
+	view.webContents.setWindowOpenHandler(({ url }) => {
+		// ALL links that would open a new window are now opened as a new tab
+		createView(url, parentWindow);
+		return { action: "deny" };
+	});
 
+	// Insert the new view after the current one
+	const newIndex = state.activeIndex + 1;
+	state.views.splice(newIndex, 0, view);
+	state.activeIndex = newIndex;
+
+	parentWindow.on("resize", () => adjustViewBounds(view, parentWindow));
+
+	view.webContents.loadURL(url);
 	view.webContents.on("page-title-updated", (_event, title) => {
-		if (getActiveView()?.view === view) {
+		if (windowTabs.get(parentWindow)?.views[state.activeIndex] === view) {
 			parentWindow.setTitle(title);
 		}
 	});
-
 	view.webContents.once("did-finish-load", () => {
-		const pageUrl = view.webContents.getURL();
-		const pageTitle = view.webContents.getTitle();
-		addHistoryItem({ url: pageUrl, title: pageTitle });
+		addHistoryItem({
+			url: view.webContents.getURL(),
+			title: view.webContents.getTitle(),
+		});
 	});
 
 	createContextMenu(view.webContents);
-	showActiveView();
+	showActiveView(parentWindow);
 }
 
-export function getActiveView() {
-	return activeViewIndex > -1 ? allViews[activeViewIndex] : null;
-}
+// --- All functions below are now window-specific ---
 
-export function nextView() {
-	if (allViews.length === 0) return;
-	activeViewIndex = (activeViewIndex + 1) % allViews.length;
-	showActiveView();
-}
-
-export function previousView() {
-	if (allViews.length === 0) return;
-	activeViewIndex = (activeViewIndex - 1 + allViews.length) % allViews.length;
-	showActiveView();
-}
-
-export function closeActiveView() {
-	const activeItem = getActiveView();
-	if (!activeItem) return;
-
-	(activeItem.view.webContents as any).destroy();
-	allViews.splice(activeViewIndex, 1);
-
-	const windowHadLastTab = activeItem.parentWindow;
-	const remainingTabsInWindow = allViews.some(
-		(item) => item.parentWindow === windowHadLastTab
-	);
-	if (!remainingTabsInWindow) {
-		createWelcomeView(windowHadLastTab);
-	}
-
-	if (activeViewIndex >= allViews.length) {
-		activeViewIndex = allViews.length - 1;
-	}
-
-	if (allViews.length === 0) {
-		activeViewIndex = -1;
-	}
-
-	showActiveView();
-}
-
-export function goBack() {
-	const activeItem = getActiveView();
-	if (activeItem && activeItem.view.webContents.canGoBack()) {
-		activeItem.view.webContents.goBack();
+export function showWelcomeViewForFocusedWindow() {
+	const win = BrowserWindow.getFocusedWindow();
+	if (win) {
+		const state = windowTabs.get(win);
+		if (state) {
+			state.activeIndex = -1; // Deactivate all tabs
+			showActiveView(win);
+		}
 	}
 }
 
-export function goForward() {
-	const activeItem = getActiveView();
-	if (activeItem && activeItem.view.webContents.canGoForward()) {
-		activeItem.view.webContents.goForward();
+export function nextView(win: BrowserWindow) {
+	const state = windowTabs.get(win);
+	if (state && state.views.length > 0) {
+		state.activeIndex = (state.activeIndex + 1) % state.views.length;
+		showActiveView(win);
 	}
 }
 
-export function reloadActiveView() {
-	const activeItem = getActiveView();
-	if (activeItem) {
-		activeItem.view.webContents.reload();
+export function previousView(win: BrowserWindow) {
+	const state = windowTabs.get(win);
+	if (state && state.views.length > 0) {
+		state.activeIndex =
+			(state.activeIndex - 1 + state.views.length) % state.views.length;
+		showActiveView(win);
 	}
 }
 
-export function toggleFullScreen() {
-	const activeItem = getActiveView();
-	const window = activeItem?.parentWindow || BrowserWindow.getFocusedWindow();
-	if (window) {
-		window.setFullScreen(!window.isFullScreen());
+export function closeActiveView(win: BrowserWindow) {
+	const state = windowTabs.get(win);
+	if (!state || state.activeIndex < 0) return;
+
+	const viewToClose = state.views[state.activeIndex];
+	(viewToClose.webContents as any)?.destroy();
+	state.views.splice(state.activeIndex, 1);
+
+	if (state.activeIndex >= state.views.length) {
+		state.activeIndex = state.views.length - 1;
+	}
+
+	if (state.views.length === 0) {
+		state.activeIndex = -1;
+	}
+
+	showActiveView(win);
+}
+
+export function goBack(win: BrowserWindow) {
+	const state = windowTabs.get(win);
+	if (state && state.activeIndex >= 0) {
+		const view = state.views[state.activeIndex];
+		if (view.webContents.canGoBack()) {
+			view.webContents.goBack();
+		}
 	}
 }
 
-export function toggleActiveViewDevTools() {
-	const activeItem = getActiveView();
-	if (activeItem) {
-		activeItem.view.webContents.toggleDevTools();
+export function goForward(win: BrowserWindow) {
+	const state = windowTabs.get(win);
+	if (state && state.activeIndex >= 0) {
+		const view = state.views[state.activeIndex];
+		if (view.webContents.canGoForward()) {
+			view.webContents.goForward();
+		}
+	}
+}
+
+export function reloadActiveView(win: BrowserWindow) {
+	const state = windowTabs.get(win);
+	if (state && state.activeIndex >= 0) {
+		state.views[state.activeIndex].webContents.reload();
 	} else {
-		const focusedWindow = BrowserWindow.getFocusedWindow();
-		const activeView = focusedWindow?.getBrowserViews()[0];
-		if (activeView) {
-			activeView.webContents.toggleDevTools();
-		}
+		const welcomeView = win.getBrowserViews()[0];
+		welcomeView?.webContents.reload();
 	}
 }
 
-export function destroyViewsForWindow(win: BrowserWindow) {
-	for (let i = allViews.length - 1; i >= 0; i--) {
-		if (allViews[i].parentWindow === win) {
-			(allViews[i].view.webContents as any).destroy();
-			allViews.splice(i, 1);
-		}
+export function toggleFullScreen(win: BrowserWindow) {
+	win.setFullScreen(!win.isFullScreen());
+}
+
+export function toggleActiveViewDevTools(win: BrowserWindow) {
+	const state = windowTabs.get(win);
+	if (state && state.activeIndex >= 0) {
+		state.views[state.activeIndex].webContents.toggleDevTools();
+	} else {
+		// Handle devtools for welcome page
+		const welcomeView = win.getBrowserViews()[0];
+		welcomeView?.webContents.toggleDevTools();
 	}
-	if (activeViewIndex >= allViews.length) {
-		activeViewIndex = allViews.length - 1;
-	}
-	showActiveView();
 }
