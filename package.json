@@ -1,7 +1,7 @@
 {
 	"name": "chromini",
 	"productName": "Chromini",
-	"version": "1.0.21",
+	"version": "1.0.22",
 	"type": "module",
 	"description": "A minimalist, developer-focused browser built with Electron and React.",
 	"author": "canmi",
