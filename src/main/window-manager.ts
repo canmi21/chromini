@@ -28,10 +28,11 @@ export function createMainWindow(urlToLoad?: string) {
 			preload: path.join(__dirname, "preload.js"),
 			contextIsolation: true,
 			nodeIntegration: false,
+			webSecurity: false, // Disables same-origin policy
 		},
 	});
 
-	newWindow.setTitle("chromini");
+	newWindow.setTitle("Chromini");
 	windows.add(newWindow);
 
 	// Create the initial view for the window
