@@ -1,6 +1,6 @@
 /* src/main/app-menu.ts */
 
-import { Menu, MenuItemConstructorOptions } from "electron";
+import { Menu, MenuItemConstructorOptions, BrowserWindow } from "electron";
 import { createMainWindow } from "./window-manager";
 import {
 	reloadActiveView,
@@ -42,18 +42,33 @@ export function createAppMenu() {
 				{
 					label: "Reload",
 					accelerator: "CommandOrControl+R", // Maps to F5 as well
-					click: () => reloadActiveView(),
+					click: () => {
+						const focusedWindow = BrowserWindow.getFocusedWindow();
+						if (focusedWindow) {
+							reloadActiveView(focusedWindow);
+						}
+					},
 				},
 				{ type: "separator" },
 				{
 					label: "Toggle Full Screen",
 					accelerator: "F11",
-					click: () => toggleFullScreen(),
+					click: () => {
+						const focusedWindow = BrowserWindow.getFocusedWindow();
+						if (focusedWindow) {
+							toggleFullScreen(focusedWindow);
+						}
+					},
 				},
 				{
 					label: "Toggle Developer Tools",
 					accelerator: "CommandOrControl+Shift+I", // Maps to F12 as well
-					click: () => toggleActiveViewDevTools(),
+					click: () => {
+						const focusedWindow = BrowserWindow.getFocusedWindow();
+						if (focusedWindow) {
+							toggleActiveViewDevTools(focusedWindow);
+						}
+					},
 				},
 			],
 		},
