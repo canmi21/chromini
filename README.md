@@ -1,6 +1,6 @@
 # Chromini
 
-![Chromini Home Page](https://raw.githubusercontent.com/canmi21/chromini/main/img/chromini-home-page.png)
+![Chromini Home Page](https://raw.githubusercontent.com/canmi21/chromini/refs/heads/main/img/chromini-home-page.png)
 
 ### Code. Preview. Immerse.
 
@@ -28,28 +28,28 @@ Navigate through all your open tabs and windows using simple function keys. No m
 ### Minimalist, Distraction-Free UI
 The interface is designed to disappear, providing an immersive, content-first experience perfect for previewing front-end applications.
 
-![Demo Site Figma](https://raw.githubusercontent.com/canmi21/chromini/main/img/demo-site-figma.png)
+![Demo Site Figma](https://raw.githubusercontent.com/canmi21/chromini/refs/heads/main/img/demo-site-figma.png)
 
-![NextJS Demo Innei](https://raw.githubusercontent.com/canmi21/chromini/main/img/nextjs-demo-innei.png)
+![NextJS Demo Innei](https://raw.githubusercontent.com/canmi21/chromini/refs/heads/main/img/nextjs-demo-innei.png)
 
 ### Multi-Window Support with a Shared Tab Timeline
 Open multiple windows, but manage your tabs from a single, global timeline. F2/F3 will cycle through all open tabs, automatically focusing the correct window.
 
-![Multi-Window Support](https://raw.githubusercontent.com/canmi21/chromini/main/img/muti-window.png)
+![Multi-Window Support](https://raw.githubusercontent.com/canmi21/chromini/refs/heads/main/img/muti-window.png)
 
 ### Persistent History & Session
 Chromini remembers your last-used window size and your 50 most recent tabs, making it easy to pick up right where you left off. All configuration is stored locally in `~/.chromini/`.
 
-![Recent History Section](https://raw.githubusercontent.com/canmi21/chromini/main/img/recent-history-section.png)
+![Recent History Section](https://raw.githubusercontent.com/canmi21/chromini/refs/heads/main/img/recent-history-section.png)
 
 ### Powerful Developer Context Menus
 The native right-click menu is packed with developer essentials, allowing you to move a tab to a new window, open links, and access developer tools instantly.
 
-![Native Context Menu](https://raw.githubusercontent.com/canmi21/chromini/main/img/chromini-native-web-right-click-menu.png)
+![Native Context Menu](https://raw.githubusercontent.com/canmi21/chromini/refs/heads/main/img/chromini-native-web-right-click-menu.png)
 
-![Web Own Right-Click Menu](https://raw.githubusercontent.com/canmi21/chromini/main/img/web-own-right-click-menu.png)
+![Web Own Right-Click Menu](https://raw.githubusercontent.com/canmi21/chromini/refs/heads/main/img/web-own-right-click-menu.png)
 
-![Home Page Right-Click](https://raw.githubusercontent.com/canmi21/chromini/main/img/home-page-right-click.png)
+![Home Page Right-Click](https://raw.githubusercontent.com/canmi21/chromini/refs/heads/main/img/home-page-right-click.png)
 
 ### Unrestricted Local Development
 With `webSecurity` disabled, Chromini allows unrestricted `fetch` requests between different local ports (e.g., from your React app at `localhost:3000` to your API at `localhost:8000`), eliminating CORS headaches during development.
