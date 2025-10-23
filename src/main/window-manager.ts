@@ -1,6 +1,6 @@
 /* src/main/window-manager.ts */
 
-import { BrowserWindow } from "electron";
+import { BrowserWindow, session } from "electron";
 import path from "path";
 import { fileURLToPath } from "url";
 import { getConfig, saveConfig } from "./config-manager";
@@ -24,12 +24,14 @@ export function createMainWindow(urlToLoad?: string) {
 			preload: path.join(__dirname, "preload.js"),
 			contextIsolation: true,
 			nodeIntegration: false,
-			webSecurity: false, // Disables same-origin policy
+			webSecurity: false,
+			session: session.fromPartition("persist:main"), // Use persistent session
+			partition: "persist:main", // Explicit partition
 		},
 	});
 
 	windows.add(newWindow);
-	initializeWindow(newWindow); // Register this new window with the view manager
+	initializeWindow(newWindow);
 
 	// Create the initial view for the window
 	if (urlToLoad) {
@@ -48,7 +50,7 @@ export function createMainWindow(urlToLoad?: string) {
 
 	// Clean up on close
 	newWindow.on("closed", () => {
-		cleanupWindow(newWindow); // Unregister the window and its views
+		cleanupWindow(newWindow);
 		windows.delete(newWindow);
 	});
 
