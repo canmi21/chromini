@@ -23,11 +23,15 @@ app.commandLine.appendSwitch(
 );
 
 // Disable automation-related flags
-app.commandLine.appendSwitch("disable-blink-features", "AutomationControlled");
 app.commandLine.appendSwitch("exclude-switches", "enable-automation");
 
+// Allow loading local resources
+app.commandLine.appendSwitch("disable-web-security");
+app.commandLine.appendSwitch("allow-file-access-from-files");
+
 app.whenReady().then(async () => {
-	const ses = session.defaultSession;
+	// Use persistent session
+	const ses = session.fromPartition("persist:main");
 
 	// Set realistic user agent
 	const userAgent = ses.getUserAgent();
@@ -37,10 +41,10 @@ app.whenReady().then(async () => {
 	);
 	ses.setUserAgent(chromeUserAgent);
 
-	// Configure session for better compatibility
+	// Configure session
 	ses.setPreloads([]);
 
-	// Allow third-party cookies (required for Google login)
+	// Allow third-party cookies
 	await ses.cookies
 		.set({
 			url: "https://accounts.google.com",
@@ -49,7 +53,7 @@ app.whenReady().then(async () => {
 			sameSite: "no_restriction",
 			secure: true,
 		})
-		.catch(() => {}); // Test cookie setup
+		.catch(() => {});
 
 	// Remove restrictive headers
 	ses.webRequest.onHeadersReceived((details, callback) => {
@@ -58,10 +62,23 @@ app.whenReady().then(async () => {
 		delete responseHeaders["content-security-policy-report-only"];
 		delete responseHeaders["permissions-policy"];
 		delete responseHeaders["x-frame-options"];
+
+		// Allow CORS for localhost
+		if (
+			details.url.includes("localhost") ||
+			details.url.includes("127.0.0.1")
+		) {
+			responseHeaders["access-control-allow-origin"] = ["*"];
+			responseHeaders["access-control-allow-methods"] = [
+				"GET, POST, PUT, DELETE, OPTIONS",
+			];
+			responseHeaders["access-control-allow-headers"] = ["*"];
+		}
+
 		callback({ responseHeaders });
 	});
 
-	// Add headers to appear more like Chrome
+	// Add Chrome-like headers
 	ses.webRequest.onBeforeSendHeaders((details, callback) => {
 		const headers = details.requestHeaders;
 
@@ -69,9 +86,22 @@ app.whenReady().then(async () => {
 		headers["sec-ch-ua"] = '"Chromium";v="130", "Not?A_Brand";v="99"';
 		headers["sec-ch-ua-mobile"] = "?0";
 		headers["sec-ch-ua-platform"] = '"Linux"';
-		headers["sec-fetch-site"] = headers["sec-fetch-site"] || "none";
-		headers["sec-fetch-mode"] = headers["sec-fetch-mode"] || "navigate";
-		headers["sec-fetch-dest"] = headers["sec-fetch-dest"] || "document";
+
+		// Set proper fetch headers based on request type
+		if (!headers["sec-fetch-site"]) {
+			// Localhost requests should be same-origin
+			if (
+				details.url.includes("localhost") ||
+				details.url.includes("127.0.0.1")
+			) {
+				headers["sec-fetch-site"] = "same-origin";
+			} else {
+				headers["sec-fetch-site"] = "none";
+			}
+		}
+
+		headers["sec-fetch-mode"] = headers["sec-fetch-mode"] || "cors";
+		headers["sec-fetch-dest"] = headers["sec-fetch-dest"] || "empty";
 
 		// Ensure proper referer and origin for Google
 		if (
