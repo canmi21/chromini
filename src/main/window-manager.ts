@@ -4,11 +4,7 @@ import { BrowserWindow } from "electron";
 import path from "path";
 import { fileURLToPath } from "url";
 import { getConfig, saveConfig } from "./config-manager";
-import {
-	createWelcomeView,
-	createView,
-	destroyViewsForWindow,
-} from "./view-manager";
+import { initializeWindow, cleanupWindow, createView } from "./view-manager";
 
 // Recreate __dirname for ES Module compatibility
 const __filename = fileURLToPath(import.meta.url);
@@ -32,14 +28,14 @@ export function createMainWindow(urlToLoad?: string) {
 		},
 	});
 
-	newWindow.setTitle("Chromini");
 	windows.add(newWindow);
+	initializeWindow(newWindow); // Register this new window with the view manager
 
 	// Create the initial view for the window
 	if (urlToLoad) {
 		createView(urlToLoad, newWindow);
 	} else {
-		createWelcomeView(newWindow);
+		newWindow.setTitle("Chromini");
 	}
 
 	// Save window size on close for persistence
@@ -52,7 +48,7 @@ export function createMainWindow(urlToLoad?: string) {
 
 	// Clean up on close
 	newWindow.on("closed", () => {
-		destroyViewsForWindow(newWindow);
+		cleanupWindow(newWindow); // Unregister the window and its views
 		windows.delete(newWindow);
 	});
 
