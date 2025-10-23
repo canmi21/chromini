@@ -1,18 +1,17 @@
 /* src/main/view-manager.ts */
 
-import { BrowserWindow, BrowserView, shell } from "electron";
+import { BrowserWindow, BrowserView, shell, session } from "electron";
 import path from "path";
 import { fileURLToPath } from "url";
 import { addHistoryItem } from "./config-manager";
 import { createContextMenu, createWelcomeContextMenu } from "./context-menu";
 
-// --- NEW DATA STRUCTURE: Per-window tab management ---
+// Per-window tab management
 interface TabState {
 	views: BrowserView[];
 	activeIndex: number;
 }
 const windowTabs = new Map<BrowserWindow, TabState>();
-// -----------------------------------------------------------
 
 const GITHUB_URL = "https://github.com/canmi21/chromini";
 
@@ -25,10 +24,15 @@ const WELCOME_URL = isDev
 	? "http://localhost:5173"
 	: `file://${path.join(__dirname, "../dist/index.html")}`;
 
+// Get the persistent session - this is the KEY fix
+function getPersistentSession() {
+	return session.fromPartition("persist:main");
+}
+
 // Initializes a new window's tab state
 export function initializeWindow(win: BrowserWindow) {
 	windowTabs.set(win, { views: [], activeIndex: -1 });
-	createWelcomeView(win); // Each new window starts with a welcome page
+	createWelcomeView(win);
 }
 
 // Cleans up a window's tab state when it's closed
@@ -54,7 +58,6 @@ function showActiveView(win: BrowserWindow) {
 	win.getBrowserViews().forEach((v) => win.removeBrowserView(v));
 
 	if (state.activeIndex === -1 || !state.views[state.activeIndex]) {
-		// No active tab, show the welcome view
 		createWelcomeView(win);
 		win.setTitle("Chromini");
 	} else {
@@ -70,6 +73,7 @@ export function createWelcomeView(parentWindow: BrowserWindow) {
 		webPreferences: {
 			preload: path.join(__dirname, "preload.js"),
 			webSecurity: false,
+			session: getPersistentSession(), // FIXED: Use persistent session
 		},
 	});
 
@@ -80,9 +84,9 @@ export function createWelcomeView(parentWindow: BrowserWindow) {
 	// Special link handler for the welcome page
 	welcomeView.webContents.setWindowOpenHandler(({ url }) => {
 		if (url.startsWith("https://github.com/canmi21/chromini")) {
-			shell.openExternal(url); // ONLY the GitHub link opens externally
+			shell.openExternal(url);
 		} else {
-			createView(url, parentWindow); // Other links open as new tabs
+			createView(url, parentWindow);
 		}
 		return { action: "deny" };
 	});
@@ -99,12 +103,13 @@ export function createView(url: string, parentWindow: BrowserWindow) {
 		webPreferences: {
 			contextIsolation: true,
 			webSecurity: false,
+			session: getPersistentSession(), // FIXED: Use persistent session
+			partition: "persist:main", // FIXED: Explicit partition
 		},
 	});
 
 	// Standard link handler for all web content
 	view.webContents.setWindowOpenHandler(({ url }) => {
-		// ALL links that would open a new window are now opened as a new tab
 		createView(url, parentWindow);
 		return { action: "deny" };
 	});
@@ -133,14 +138,12 @@ export function createView(url: string, parentWindow: BrowserWindow) {
 	showActiveView(parentWindow);
 }
 
-// --- All functions below are now window-specific ---
-
 export function showWelcomeViewForFocusedWindow() {
 	const win = BrowserWindow.getFocusedWindow();
 	if (win) {
 		const state = windowTabs.get(win);
 		if (state) {
-			state.activeIndex = -1; // Deactivate all tabs
+			state.activeIndex = -1;
 			showActiveView(win);
 		}
 	}
@@ -221,7 +224,6 @@ export function toggleActiveViewDevTools(win: BrowserWindow) {
 	if (state && state.activeIndex >= 0) {
 		state.views[state.activeIndex].webContents.toggleDevTools();
 	} else {
-		// Handle devtools for welcome page
 		const welcomeView = win.getBrowserViews()[0];
 		welcomeView?.webContents.toggleDevTools();
 	}
